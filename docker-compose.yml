@@ -1,0 +1,293 @@
+version: '3.8'
+
+x-airflow-common: &airflow-common
+  build: .
+  environment: &airflow-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    AIRFLOW__CORE__FERNET_KEY: ''
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'false'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__WEBSERVER__SECRET_KEY: 'change-me-in-production'
+    AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
+    ANALYSIS_BASE_DIR: /opt/airflow/project
+    ANALYSIS_LOGS_DIR: /opt/airflow/project/logs
+    ANALYSIS_OUTPUT_DIR: /opt/airflow/project/results
+    ANALYSIS_APPLOG_DIR: /opt/airflow/project/applogs
+    JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
+    PG_HOST: postgres
+    PG_PORT: '5432'
+    PG_USER: airflow
+    PG_PASSWORD: airflow
+    PG_JOB_DB: iloon_jobs
+    JOBS_JSONL_DIR: /opt/airflow/project/logs
+    ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    AI_SERVER_URL: http://ai-server:8000
+    KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./logs:/opt/airflow/project/logs
+    - ./results:/opt/airflow/project/results
+    - ./applogs:/opt/airflow/project/applogs
+    - ./cache:/opt/airflow/project/cache
+    - ./analyze_ai_vs_normal.py:/opt/airflow/project/analyze_ai_vs_normal.py
+    - ./analyze_job_trends.py:/opt/airflow/project/analyze_job_trends.py
+    - ./analyze_user_segmentation.py:/opt/airflow/project/analyze_user_segmentation.py
+    - ./analyze_job_popularity.py:/opt/airflow/project/analyze_job_popularity.py
+    - ./stream_events.py:/opt/airflow/project/stream_events.py
+    - ./user_event_generator.py:/opt/airflow/project/user_event_generator.py
+    - ./generator_base.py:/opt/airflow/project/generator_base.py
+    - ./generator_backend.py:/opt/airflow/project/generator_backend.py
+    - ./generator_frontend.py:/opt/airflow/project/generator_frontend.py
+    - ./generator_ai_ml.py:/opt/airflow/project/generator_ai_ml.py
+    - ./generator_data.py:/opt/airflow/project/generator_data.py
+    - ./generator_devops.py:/opt/airflow/project/generator_devops.py
+    - ./generator_mobile.py:/opt/airflow/project/generator_mobile.py
+    - ./generator_security.py:/opt/airflow/project/generator_security.py
+    - ./generator_game.py:/opt/airflow/project/generator_game.py
+    - ./generator_qa.py:/opt/airflow/project/generator_qa.py
+    - ./generator_pm.py:/opt/airflow/project/generator_pm.py
+    - airflow_logs:/opt/airflow/logs
+  depends_on:
+    postgres:
+      condition: service_healthy
+  restart: unless-stopped
+
+services:
+
+  # ════════════════════════════════════════
+  #  DATABASE
+  # ════════════════════════════════════════
+  postgres:
+    image: postgres:15
+    container_name: money-postgres
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # ════════════════════════════════════════
+  #  OPENSEARCH
+  # ════════════════════════════════════════
+  opensearch:
+    image: opensearchproject/opensearch:2.13.0
+    container_name: money-opensearch
+    environment:
+      - cluster.name=money-cluster
+      - node.name=opensearch-node1
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - OPENSEARCH_JAVA_OPTS=-Xms2g -Xmx2g
+      - DISABLE_INSTALL_DEMO_CONFIG=true
+      - DISABLE_SECURITY_PLUGIN=true
+      - plugins.ml_commons.only_run_on_ml_node=false
+      - plugins.ml_commons.native_memory_threshold=99
+      - plugins.ml_commons.jvm_heap_memory_threshold=99
+      - plugins.ml_commons.allow_registering_model_via_url=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - opensearch_data:/usr/share/opensearch/data
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+    restart: unless-stopped
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.13.0
+    container_name: money-opensearch-dashboards
+    environment:
+      - OPENSEARCH_HOSTS=["http://opensearch:9200"]
+      - DISABLE_SECURITY_DASHBOARDS_PLUGIN=true
+    ports:
+      - "5601:5601"
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ════════════════════════════════════════
+  #  KAFKA (KRaft mode)
+  # ════════════════════════════════════════
+  kafka:
+    image: apache/kafka:latest
+    container_name: money-kafka
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_RETENTION_HOURS: 24
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    ports:
+      - "9094:9094"
+    restart: unless-stopped
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: money-kafka-ui
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=money-cluster
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+    ports:
+      - "8090:8080"
+    depends_on:
+      - kafka
+    restart: unless-stopped
+
+  # ════════════════════════════════════════
+  #  AIRFLOW
+  # ════════════════════════════════════════
+  airflow-init:
+    <<: *airflow-common
+    container_name: money-airflow-init
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow db migrate
+        airflow users create \
+          --username admin \
+          --password admin \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email admin@example.com && \
+        echo "Airflow init done"
+    restart: on-failure
+
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: money-airflow-webserver
+    command: webserver
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: money-airflow-scheduler
+    command: scheduler
+    healthcheck:
+      test: ["CMD", "airflow", "jobs", "check", "--job-type", "SchedulerJob", "--limit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ════════════════════════════════════════
+  #  SUPERSET
+  # ════════════════════════════════════════
+  superset:
+    image: apache/superset:3.1.0
+    container_name: money-superset
+    environment:
+      - SUPERSET_SECRET_KEY=iloon-superset-secret-key
+      - SQLALCHEMY_DATABASE_URI=postgresql+psycopg2://airflow:airflow@postgres/superset
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        superset db upgrade &&
+        superset fab create-admin \
+          --username admin \
+          --firstname Admin \
+          --lastname User \
+          --email admin@example.com \
+          --password admin 2>/dev/null || true &&
+        superset init &&
+        superset run -h 0.0.0.0 -p 8088 --with-threads
+    ports:
+      - "8088:8088"
+    volumes:
+      - superset_home:/app/superset_home
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ════════════════════════════════════════
+  #  AI 서버 (FastAPI)
+  # ════════════════════════════════════════
+  ai-server:
+    build:
+      context: .
+      dockerfile: ai_server/Dockerfile
+    container_name: money-ai-server
+    ports:
+      - "8000:8000"
+    environment:
+      - PG_HOST=postgres
+      - PG_PORT=5432
+      - PG_USER=airflow
+      - PG_PASSWORD=airflow
+      - OLLAMA_HOST=http://ollama:11434
+      - OLLAMA_MODEL=llama3
+      - OPENSEARCH_HOST=http://opensearch:9200
+      - JOBS_JSONL_DIR=/app/logs
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # ════════════════════════════════════════
+  #  OLLAMA
+  # ════════════════════════════════════════
+  ollama:
+    image: ollama/ollama:latest
+    container_name: money-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  airflow_logs:
+  opensearch_data:
+  ollama_data:
+  ai_server_data:
+  kafka_data:
+  superset_home:
