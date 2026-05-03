@@ -1,7 +1,11 @@
-from .user import User, Survey, ResumeAnalysis, AIRecommendation, GeneralRecommendation
-from .job import Job
+from .user import User, Survey, Document, DocumentScore, AIFeedback, AIRecommendation, GeneralRecommendation
+from .job import Job, JobRelation
+from .log import UserActivityLog
 
 __all__ = [
-    "User", "Survey", "ResumeAnalysis", "AIRecommendation", "GeneralRecommendation",
-    "Job",
+    "User", "Survey",
+    "Document", "DocumentScore", "AIFeedback",
+    "AIRecommendation", "GeneralRecommendation",
+    "Job", "JobRelation",
+    "UserActivityLog",
 ]

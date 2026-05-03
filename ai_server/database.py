@@ -61,7 +61,7 @@ async def get_job_db():
 
 # ── 테이블 생성 ───────────────────────────────────────────────
 async def init_db():
-    from .models import user, job  # noqa
+    from .models import user, job, log  # noqa
 
     # 1. DB 없으면 생성
     await _ensure_databases()

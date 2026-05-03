@@ -18,6 +18,7 @@ from .routers import (
     jobs_router,
     chat_router,
     importer_router,
+    log_router,
 )
 
 # ── 로깅 설정 ─────────────────────────────────────────────────
@@ -106,6 +107,7 @@ app.include_router(recommendations_router, prefix="/api/v1")
 app.include_router(jobs_router,            prefix="/api/v1")
 app.include_router(chat_router,            prefix="/api/v1")
 app.include_router(importer_router,        prefix="/api/v1")
+app.include_router(log_router,             prefix="/api/v1")
 
 
 # ── 헬스체크 ─────────────────────────────────────────────────

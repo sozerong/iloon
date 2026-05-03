@@ -4,3 +4,4 @@ from .recommendations import router as recommendations_router
 from .jobs import router as jobs_router
 from .chat import router as chat_router
 from .importer import router as importer_router
+from .log import router as log_router

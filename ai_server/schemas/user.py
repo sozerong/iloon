@@ -5,7 +5,7 @@ from typing import Optional, List
 from pydantic import BaseModel, Field
 
 
-# ── Survey ─────────────────────────────────────────────────────
+# ── Survey ─────────────────────────────────────────────────────────────────────
 class SurveyCreate(BaseModel):
     job_type:    Optional[str] = Field(None, description="직무 (예: 백엔드 개발)")
     region:      Optional[str] = Field(None, description="근무 희망 지역")
@@ -27,24 +27,77 @@ class SurveyOut(SurveyCreate):
     model_config = {"from_attributes": True}
 
 
-# ── ResumeAnalysis ─────────────────────────────────────────────
-class ResumeAnalysisCreate(BaseModel):
-    original_text: str = Field(..., description="원본 이력서 텍스트")
+# ── Document ───────────────────────────────────────────────────────────────────
+class DocumentCreate(BaseModel):
+    type:          str           = Field("resume", description="resume | cover_letter | portfolio")
+    title:         Optional[str] = Field(None, description="문서 제목")
+    original_text: Optional[str] = Field(None, description="원본 텍스트")
+    file_url:      Optional[str] = Field(None, description="포트폴리오 파일 URL")
 
 
-class ResumeAnalysisOut(BaseModel):
-    id:               str
-    user_id:          str
-    original_text:    Optional[str]
-    analyzed_content: Optional[str]
-    score:            Optional[float]
-    feedback:         Optional[str]
-    created_at:       datetime
+class DocumentOut(BaseModel):
+    id:            str
+    user_id:       str
+    type:          str
+    title:         Optional[str]
+    original_text: Optional[str]
+    ai_summary:    Optional[str]
+    total_score:   Optional[float]
+    file_url:      Optional[str]
+    created_at:    datetime
+    updated_at:    datetime
 
     model_config = {"from_attributes": True}
 
 
-# ── AIRecommendation ───────────────────────────────────────────
+class DocumentListItem(BaseModel):
+    """목록 조회용 (요약 — 원본 텍스트 제외)"""
+    id:          str
+    user_id:     str
+    type:        str
+    title:       Optional[str]
+    total_score: Optional[float]
+    created_at:  datetime
+    updated_at:  datetime
+
+    model_config = {"from_attributes": True}
+
+
+class DocumentWithScores(DocumentOut):
+    """세부 점수 포함 — 이력서/자소서 세부 페이지용"""
+    scores:    List["DocumentScoreOut"]  = []
+    feedbacks: List["AIFeedbackOut"]     = []
+
+    model_config = {"from_attributes": True}
+
+
+# ── DocumentScore ──────────────────────────────────────────────────────────────
+class DocumentScoreOut(BaseModel):
+    id:          str
+    document_id: str
+    category:    str
+    score:       float
+    max_score:   float
+    created_at:  datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ── AIFeedback ─────────────────────────────────────────────────────────────────
+class AIFeedbackOut(BaseModel):
+    id:            str
+    document_id:   str
+    user_id:       str
+    feedback_type: str
+    section:       Optional[str]
+    content:       str
+    model_version: Optional[str]
+    created_at:    datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ── AIRecommendation ───────────────────────────────────────────────────────────
 class AIRecommendationOut(BaseModel):
     id:          str
     user_id:     str
@@ -56,7 +109,7 @@ class AIRecommendationOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-# ── GeneralRecommendation ──────────────────────────────────────
+# ── GeneralRecommendation ──────────────────────────────────────────────────────
 class GeneralRecommendationOut(BaseModel):
     id:         str
     user_id:    str
@@ -66,7 +119,7 @@ class GeneralRecommendationOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-# ── User ───────────────────────────────────────────────────────
+# ── User ───────────────────────────────────────────────────────────────────────
 class UserOut(BaseModel):
     id:         str
     created_at: datetime
