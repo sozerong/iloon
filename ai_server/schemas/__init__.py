@@ -1,6 +1,6 @@
 from .user import (
     SurveyCreate, SurveyUpdate, SurveyOut,
-    ResumeAnalysisCreate, ResumeAnalysisOut,
+    DocumentCreate, DocumentOut, DocumentListItem, DocumentWithScores,
     AIRecommendationOut, GeneralRecommendationOut,
     UserOut,
 )

@@ -180,7 +180,9 @@ def analysis_2(df: DataFrame) -> None:
     )
 
     result2 = (
-        region_df.groupBy("region_sido")
+        # user_event_generator.py 가 내보내는 필드명은 "region" 이다.
+        # "region_sido" 는 이벤트 스키마에 존재한 적이 없어 이 단계가 항상 실패했다.
+        region_df.groupBy("region")
         .pivot("event_type", ["job_detail_view", "apply_click"])
         .count()
         .withColumnRenamed("job_detail_view", "AI클릭수")
@@ -204,16 +206,18 @@ def analysis_3(df: DataFrame) -> None:
 
     dwell_df = df.filter(
         (F.col("event_type") == "job_detail_view")
-        & F.col("time_on_page_sec").isNotNull()
+        # user_event_generator.py 의 필드명은 session_duration 이다.
+        # "time_on_page_sec" 는 이벤트 스키마에 없어 이 단계가 항상 실패했다.
+        & F.col("session_duration").isNotNull()
     )
 
     result3 = (
         dwell_df.groupBy("is_ai_recommended")
         .agg(
             F.count("*").alias("클릭수"),
-            F.round(F.avg("time_on_page_sec"), 1).alias("평균체류시간(초)"),
-            F.round(F.min("time_on_page_sec"), 1).alias("최소(초)"),
-            F.round(F.max("time_on_page_sec"), 1).alias("최대(초)"),
+            F.round(F.avg("session_duration"), 1).alias("평균체류시간(초)"),
+            F.round(F.min("session_duration"), 1).alias("최소(초)"),
+            F.round(F.max("session_duration"), 1).alias("최대(초)"),
         )
         .withColumn(
             "추천여부",
@@ -232,18 +236,20 @@ def analysis_4(df: DataFrame) -> None:
     print("분석 4. AI 매칭 점수 구간별 지원 전환율")
     print("=" * 55)
 
+    # 조회↔지원을 짝지을 키. user_event_generator.py 는 session_id 를 내보내지 않아
+    # (스키마: event_id/user_id/job_id/...) 같은 사용자·같은 공고 기준인 user_id 로 짝짓는다.
     click_df = df.filter(
         (F.col("event_type") == "job_detail_view")
         & (F.col("is_ai_recommended") == True)
-    ).select("session_id", "job_id", "match_score")
+    ).select("user_id", "job_id", "match_score")
 
     apply_df = df.filter(
         (F.col("event_type") == "apply_click")
         & (F.col("is_ai_recommended") == True)
-    ).select("session_id", "job_id", F.lit(1).alias("applied"))
+    ).select("user_id", "job_id", F.lit(1).alias("applied"))
 
     joined = (
-        click_df.join(apply_df, ["session_id", "job_id"], "left")
+        click_df.join(apply_df, ["user_id", "job_id"], "left")
         .withColumn("applied", F.coalesce(F.col("applied"), F.lit(0)))
         .withColumn(
             "score_bucket",

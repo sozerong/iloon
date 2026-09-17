@@ -34,7 +34,9 @@ from airflow.utils.trigger_rule import TriggerRule
 
 # ── 경로 / 환경 ──────────────────────────────────────────────
 PROJECT_DIR = "/opt/airflow/project"
-PYTHON_BIN  = "/opt/airflow/project/venv/bin/python"
+# 이미지의 기본 인터프리터. requirements.txt가 여기에 설치된다 (Dockerfile 참조).
+# 예전 값이던 /opt/airflow/project/venv 는 어디서도 만들어지지 않아 태스크가 전부 실패했다.
+PYTHON_BIN  = "python"
 AI_SERVER   = os.environ.get("AI_SERVER_URL", "http://ai-server:8000")
 
 BASE_ENV = {
