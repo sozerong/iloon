@@ -1,0 +1,37 @@
+{
+  "name": "sweep_cs200_run3",
+  "recorded_at": "2026-08-24T23:47:25",
+  "meta": {
+    "docs": 20000,
+    "repeat": 3,
+    "chunk_size": 200,
+    "max_chunk_bytes": null,
+    "with_ml": false,
+    "opensearch": "http://localhost:9200"
+  },
+  "total_seconds": 6.773782799999999,
+  "stages": [
+    {
+      "name": "색인 전체",
+      "seconds": 6.773782799999999,
+      "children": [
+        {
+          "name": "문서 준비",
+          "seconds": 0.06830670000000083,
+          "children": [],
+          "note": "(20000건, chunk_size=200, max_chunk_bytes=10MB)"
+        },
+        {
+          "name": "전송",
+          "seconds": 6.2945735,
+          "children": []
+        },
+        {
+          "name": "refresh 복구",
+          "seconds": 0.3372883000000009,
+          "children": []
+        }
+      ]
+    }
+  ]
+}

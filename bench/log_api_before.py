@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, field_validator, ValidationError
 
@@ -28,8 +28,6 @@ os.makedirs(LOGS_DIR, exist_ok=True)
 
 def setup_logger() -> logging.Logger:
     logger = logging.getLogger("log_api")
-    if logger.handlers:            # 모듈 재로드(--reload, 테스트) 시 핸들러 중복 방지
-        return logger
     logger.setLevel(logging.DEBUG)
 
     fmt = logging.Formatter(
@@ -230,7 +228,7 @@ async def log_requests(request: Request, call_next):
 
 # ── 엔드포인트 ────────────────────────────────────────────────
 @app.post("/logs/bulk", status_code=202)
-async def ingest_bulk(req: BulkLogRequest, request: Request):
+async def ingest_bulk(req: BulkLogRequest, request: Request, background_tasks: BackgroundTasks):
     t_handler = time.perf_counter()
     if not req.events:
         raise HTTPException(status_code=400, detail="events 배열이 비어 있습니다.")
@@ -251,10 +249,9 @@ async def ingest_bulk(req: BulkLogRequest, request: Request):
                 buffer.clear()
 
         if to_flush:
-            # 백그라운드로 던지지 않고 여기서 끝낸다.
-            # BackgroundTasks로 넘기면 응답이 먼저 끝나 종료 시점에 유실 창이 생긴다.
-            await flush_to_disk(to_flush)
-            logger.debug("임계치 도달 → 플러시: %d건", len(to_flush))
+            # [BASELINE] 원본 동작: 응답을 먼저 끝내고 디스크 쓰기는 뒤로 던진다
+            background_tasks.add_task(flush_to_disk, to_flush)
+            logger.debug("임계치 도달 → 플러시 예약: %d건", len(to_flush))
         _record("저장", (time.perf_counter() - t0) * 1000)
         _record("핸들러", (time.perf_counter() - t_handler) * 1000)
         request.state.handler_ms = (time.perf_counter() - t_handler) * 1000

@@ -62,3 +62,10 @@ Thumbs.db
 # ── Playwright ────────────────────────────────────────────────
 playwright-report/
 test-results/
+
+# ── 벤치마크 산출물 ──────────────────────────────────────────
+# 씨앗/입력 데이터는 results.zip 에서 재생성 가능하고 수백 MB라 커밋하지 않는다.
+#   python bench/make_docs.py --count 5000
+bench/seed/
+bench/tmp_logs/
+!bench/results/

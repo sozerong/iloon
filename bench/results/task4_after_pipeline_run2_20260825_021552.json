@@ -1,0 +1,37 @@
+{
+  "name": "task4_after_pipeline_run2",
+  "recorded_at": "2026-08-25T02:15:52",
+  "meta": {
+    "docs": 5000,
+    "repeat": 3,
+    "chunk_size": null,
+    "max_chunk_bytes": null,
+    "with_ml": true,
+    "opensearch": "http://localhost:9200"
+  },
+  "total_seconds": 99.2297371,
+  "stages": [
+    {
+      "name": "색인 전체",
+      "seconds": 99.2297371,
+      "children": [
+        {
+          "name": "문서 준비",
+          "seconds": 0.015967299999999796,
+          "children": [],
+          "note": "(5000건, chunk_size=2000, max_chunk_bytes=10MB)"
+        },
+        {
+          "name": "전송 + 임베딩",
+          "seconds": 98.69996189999998,
+          "children": []
+        },
+        {
+          "name": "refresh 복구",
+          "seconds": 0.43246160000001055,
+          "children": []
+        }
+      ]
+    }
+  ]
+}

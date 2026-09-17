@@ -1,0 +1,285 @@
+{
+  "label": "task3_after",
+  "dag": "ai_vs_normal_analysis",
+  "runs": [
+    137.213364,
+    137.8698095,
+    145.50864359999997
+  ],
+  "ok": [
+    true,
+    true,
+    true
+  ],
+  "stats": {
+    "n": 3.0,
+    "mean": 140.19727236666668,
+    "p50": 137.8698095,
+    "p95": 145.50864359999997,
+    "min": 137.213364,
+    "max": 145.50864359999997
+  },
+  "tasks": [
+    [
+      {
+        "task_id": "behavior_1",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "behavior_2",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "behavior_3",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "behavior_4",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "behavior_5",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "job_popularity",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "notify_complete",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "trend_1",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "trend_2",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "trend_3",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "trend_4",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "trend_5",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "trend_6",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "user_segmentation",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "validate_input",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "wait_for_dummy_jobs",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "wait_for_user_events",
+        "state": "success",
+        "seconds": 0.0
+      }
+    ],
+    [
+      {
+        "task_id": "behavior_1",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "behavior_2",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "behavior_3",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "behavior_4",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "behavior_5",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "job_popularity",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "notify_complete",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "trend_1",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "trend_2",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "trend_3",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "trend_4",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "trend_5",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "trend_6",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "user_segmentation",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "validate_input",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "wait_for_dummy_jobs",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "wait_for_user_events",
+        "state": "success",
+        "seconds": 0.0
+      }
+    ],
+    [
+      {
+        "task_id": "behavior_1",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "behavior_2",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "behavior_3",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "behavior_4",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "behavior_5",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "job_popularity",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "notify_complete",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "trend_1",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "trend_2",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "trend_3",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "trend_4",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "trend_5",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "trend_6",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "user_segmentation",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "validate_input",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "wait_for_dummy_jobs",
+        "state": "success",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "wait_for_user_events",
+        "state": "success",
+        "seconds": 0.0
+      }
+    ]
+  ]
+}

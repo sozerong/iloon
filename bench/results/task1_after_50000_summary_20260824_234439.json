@@ -1,0 +1,22 @@
+{
+  "name": "task1_after_50000",
+  "meta": {
+    "docs": 50000,
+    "repeat": 1,
+    "chunk_size": null,
+    "max_chunk_bytes": null,
+    "with_ml": false,
+    "opensearch": "http://localhost:9200"
+  },
+  "runs": [
+    7.7345322
+  ],
+  "stats": {
+    "n": 1.0,
+    "mean": 7.7345322,
+    "p50": 7.7345322,
+    "p95": 7.7345322,
+    "min": 7.7345322,
+    "max": 7.7345322
+  }
+}

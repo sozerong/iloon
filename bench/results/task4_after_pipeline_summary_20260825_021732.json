@@ -1,0 +1,24 @@
+{
+  "name": "task4_after_pipeline",
+  "meta": {
+    "docs": 5000,
+    "repeat": 3,
+    "chunk_size": null,
+    "max_chunk_bytes": null,
+    "with_ml": true,
+    "opensearch": "http://localhost:9200"
+  },
+  "runs": [
+    100.463936,
+    99.2297371,
+    99.72257719999999
+  ],
+  "stats": {
+    "n": 3.0,
+    "mean": 99.80541676666667,
+    "p50": 99.72257719999999,
+    "p95": 100.463936,
+    "min": 99.2297371,
+    "max": 100.463936
+  }
+}

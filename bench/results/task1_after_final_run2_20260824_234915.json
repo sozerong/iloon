@@ -1,0 +1,37 @@
+{
+  "name": "task1_after_final_run2",
+  "recorded_at": "2026-08-24T23:49:15",
+  "meta": {
+    "docs": 5000,
+    "repeat": 3,
+    "chunk_size": null,
+    "max_chunk_bytes": null,
+    "with_ml": false,
+    "opensearch": "http://localhost:9200"
+  },
+  "total_seconds": 0.7505237999999999,
+  "stages": [
+    {
+      "name": "색인 전체",
+      "seconds": 0.7505237999999999,
+      "children": [
+        {
+          "name": "문서 준비",
+          "seconds": 0.015078200000000042,
+          "children": [],
+          "note": "(5000건, chunk_size=2000, max_chunk_bytes=10MB)"
+        },
+        {
+          "name": "전송",
+          "seconds": 0.5513471999999999,
+          "children": []
+        },
+        {
+          "name": "refresh 복구",
+          "seconds": 0.12410750000000004,
+          "children": []
+        }
+      ]
+    }
+  ]
+}

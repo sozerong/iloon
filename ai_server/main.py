@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 
 from .database import init_db
 from .services.ollama_client import close_ollama
-from .services.opensearch_service import ensure_index, ensure_ml_ready
+from .services.opensearch_service import ensure_index, ensure_ml_ready, close_client
 from .routers import (
     survey_router,
     resume_router,
@@ -59,6 +59,7 @@ async def lifespan(app: FastAPI):
     yield
 
     await close_ollama()
+    await close_client()          # OpenSearch 커넥션 정리
     logger.info("👋 AI 서버 종료")
 
 
