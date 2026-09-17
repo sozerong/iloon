@@ -17,7 +17,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.job import Job
-from ..models.user import AIRecommendation, GeneralRecommendation, ResumeAnalysis, Survey
+from ..models.user import AIRecommendation, GeneralRecommendation, Document, Survey
 from .ollama_client import get_ollama
 from .opensearch_service import neural_search, build_search_text, search_jobs
 
@@ -148,9 +148,9 @@ async def ai_recommend(
     """
     # 최신 이력서 분석
     result = await user_db.execute(
-        select(ResumeAnalysis)
-        .where(ResumeAnalysis.user_id == user_id)
-        .order_by(ResumeAnalysis.created_at.desc())
+        select(Document)
+        .where(Document.user_id == user_id, Document.type == "resume")
+        .order_by(Document.created_at.desc())
         .limit(1)
     )
     analysis = result.scalar_one_or_none()
@@ -158,7 +158,8 @@ async def ai_recommend(
         logger.info("이력서 분석 없음: user=%s", user_id)
         return []
 
-    resume_ctx  = f"{analysis.analyzed_content or ''}"
+    # ai_summary(분석 요약)가 우선, 없으면 원문으로 대체
+    resume_ctx  = f"{analysis.ai_summary or analysis.original_text or ''}"
     query_text  = resume_ctx[:500]  # 임베딩 쿼리용 (너무 길면 자름)
 
     # Neural Search로 후보 공고 추출 (top_k * 3개 후보 → LLM으로 top_k 선별)
