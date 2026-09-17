@@ -1,0 +1,285 @@
+{
+  "label": "task3_after_sched",
+  "dag": "ai_vs_normal_analysis",
+  "runs": [
+    73.923156,
+    74.459622,
+    74.178386
+  ],
+  "states": [
+    "success",
+    "success",
+    "success"
+  ],
+  "stats": {
+    "n": 3.0,
+    "mean": 74.18705466666667,
+    "p50": 74.178386,
+    "p95": 74.459622,
+    "min": 73.923156,
+    "max": 74.459622
+  },
+  "tasks": [
+    [
+      {
+        "task_id": "job_popularity",
+        "state": "success",
+        "seconds": 33.237757
+      },
+      {
+        "task_id": "user_segmentation",
+        "state": "success",
+        "seconds": 19.487625
+      },
+      {
+        "task_id": "behavior_4",
+        "state": "success",
+        "seconds": 14.745274
+      },
+      {
+        "task_id": "behavior_1",
+        "state": "success",
+        "seconds": 14.234597
+      },
+      {
+        "task_id": "behavior_2",
+        "state": "success",
+        "seconds": 13.635852
+      },
+      {
+        "task_id": "behavior_3",
+        "state": "success",
+        "seconds": 13.173645
+      },
+      {
+        "task_id": "behavior_5",
+        "state": "success",
+        "seconds": 12.005996
+      },
+      {
+        "task_id": "trend_3",
+        "state": "success",
+        "seconds": 11.72484
+      },
+      {
+        "task_id": "trend_5",
+        "state": "success",
+        "seconds": 11.639174
+      },
+      {
+        "task_id": "trend_2",
+        "state": "success",
+        "seconds": 11.229777
+      },
+      {
+        "task_id": "trend_6",
+        "state": "success",
+        "seconds": 11.187141
+      },
+      {
+        "task_id": "trend_1",
+        "state": "success",
+        "seconds": 10.611217
+      },
+      {
+        "task_id": "trend_4",
+        "state": "success",
+        "seconds": 10.098346
+      },
+      {
+        "task_id": "validate_input",
+        "state": "success",
+        "seconds": 1.819523
+      },
+      {
+        "task_id": "notify_complete",
+        "state": "success",
+        "seconds": 0.14203
+      },
+      {
+        "task_id": "wait_for_dummy_jobs",
+        "state": "success",
+        "seconds": 0.133087
+      },
+      {
+        "task_id": "wait_for_user_events",
+        "state": "success",
+        "seconds": 0.130379
+      }
+    ],
+    [
+      {
+        "task_id": "job_popularity",
+        "state": "success",
+        "seconds": 33.379466
+      },
+      {
+        "task_id": "user_segmentation",
+        "state": "success",
+        "seconds": 19.028097
+      },
+      {
+        "task_id": "behavior_4",
+        "state": "success",
+        "seconds": 14.660749
+      },
+      {
+        "task_id": "behavior_1",
+        "state": "success",
+        "seconds": 14.00129
+      },
+      {
+        "task_id": "behavior_2",
+        "state": "success",
+        "seconds": 13.571463
+      },
+      {
+        "task_id": "behavior_3",
+        "state": "success",
+        "seconds": 13.201598
+      },
+      {
+        "task_id": "behavior_5",
+        "state": "success",
+        "seconds": 12.040416
+      },
+      {
+        "task_id": "trend_3",
+        "state": "success",
+        "seconds": 11.133754
+      },
+      {
+        "task_id": "trend_2",
+        "state": "success",
+        "seconds": 10.630908
+      },
+      {
+        "task_id": "trend_6",
+        "state": "success",
+        "seconds": 10.46193
+      },
+      {
+        "task_id": "trend_1",
+        "state": "success",
+        "seconds": 10.418873
+      },
+      {
+        "task_id": "trend_4",
+        "state": "success",
+        "seconds": 10.409964
+      },
+      {
+        "task_id": "trend_5",
+        "state": "success",
+        "seconds": 9.851185
+      },
+      {
+        "task_id": "validate_input",
+        "state": "success",
+        "seconds": 1.859779
+      },
+      {
+        "task_id": "wait_for_dummy_jobs",
+        "state": "success",
+        "seconds": 0.138773
+      },
+      {
+        "task_id": "wait_for_user_events",
+        "state": "success",
+        "seconds": 0.137732
+      },
+      {
+        "task_id": "notify_complete",
+        "state": "success",
+        "seconds": 0.137143
+      }
+    ],
+    [
+      {
+        "task_id": "job_popularity",
+        "state": "success",
+        "seconds": 33.219459
+      },
+      {
+        "task_id": "user_segmentation",
+        "state": "success",
+        "seconds": 20.145076
+      },
+      {
+        "task_id": "behavior_4",
+        "state": "success",
+        "seconds": 14.713142
+      },
+      {
+        "task_id": "behavior_1",
+        "state": "success",
+        "seconds": 14.095383
+      },
+      {
+        "task_id": "behavior_2",
+        "state": "success",
+        "seconds": 13.641362
+      },
+      {
+        "task_id": "behavior_3",
+        "state": "success",
+        "seconds": 13.143386
+      },
+      {
+        "task_id": "behavior_5",
+        "state": "success",
+        "seconds": 11.966499
+      },
+      {
+        "task_id": "trend_3",
+        "state": "success",
+        "seconds": 11.582026
+      },
+      {
+        "task_id": "trend_5",
+        "state": "success",
+        "seconds": 11.39362
+      },
+      {
+        "task_id": "trend_6",
+        "state": "success",
+        "seconds": 11.279395
+      },
+      {
+        "task_id": "trend_2",
+        "state": "success",
+        "seconds": 11.002475
+      },
+      {
+        "task_id": "trend_4",
+        "state": "success",
+        "seconds": 10.635353
+      },
+      {
+        "task_id": "trend_1",
+        "state": "success",
+        "seconds": 10.563631
+      },
+      {
+        "task_id": "validate_input",
+        "state": "success",
+        "seconds": 1.88396
+      },
+      {
+        "task_id": "wait_for_dummy_jobs",
+        "state": "success",
+        "seconds": 0.139641
+      },
+      {
+        "task_id": "wait_for_user_events",
+        "state": "success",
+        "seconds": 0.139278
+      },
+      {
+        "task_id": "notify_complete",
+        "state": "success",
+        "seconds": 0.136983
+      }
+    ]
+  ]
+}

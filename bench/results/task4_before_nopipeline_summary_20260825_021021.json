@@ -1,0 +1,24 @@
+{
+  "name": "task4_before_nopipeline",
+  "meta": {
+    "docs": 5000,
+    "repeat": 3,
+    "chunk_size": null,
+    "max_chunk_bytes": null,
+    "with_ml": false,
+    "opensearch": "http://localhost:9200"
+  },
+  "runs": [
+    1.0934763,
+    0.9000616000000004,
+    0.8242898999999997
+  ],
+  "stats": {
+    "n": 3.0,
+    "mean": 0.9392759333333333,
+    "p50": 0.9000616000000004,
+    "p95": 1.0934763,
+    "min": 0.8242898999999997,
+    "max": 1.0934763
+  }
+}

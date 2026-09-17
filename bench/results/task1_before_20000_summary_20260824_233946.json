@@ -1,0 +1,22 @@
+{
+  "name": "task1_before_20000",
+  "meta": {
+    "docs": 20000,
+    "repeat": 1,
+    "chunk_size": null,
+    "max_chunk_bytes": null,
+    "with_ml": false,
+    "opensearch": "http://localhost:9200"
+  },
+  "runs": [
+    2.0031703000000003
+  ],
+  "stats": {
+    "n": 1.0,
+    "mean": 2.0031703000000003,
+    "p50": 2.0031703000000003,
+    "p95": 2.0031703000000003,
+    "min": 2.0031703000000003,
+    "max": 2.0031703000000003
+  }
+}

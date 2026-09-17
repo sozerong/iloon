@@ -1,0 +1,32 @@
+{
+  "name": "task1_before_10000_run1",
+  "recorded_at": "2026-08-24T23:39:43",
+  "meta": {
+    "docs": 10000,
+    "repeat": 1,
+    "chunk_size": null,
+    "max_chunk_bytes": null,
+    "with_ml": false,
+    "opensearch": "http://localhost:9200"
+  },
+  "total_seconds": 1.0467659,
+  "stages": [
+    {
+      "name": "색인 전체",
+      "seconds": 1.0467659,
+      "children": [
+        {
+          "name": "문서 준비",
+          "seconds": 0.13272870000000003,
+          "children": [],
+          "note": "(10000건, 31.8MB)"
+        },
+        {
+          "name": "전송",
+          "seconds": 0.9088064,
+          "children": []
+        }
+      ]
+    }
+  ]
+}

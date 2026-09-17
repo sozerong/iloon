@@ -1,0 +1,37 @@
+{
+  "name": "task4_before_nopipeline_run1",
+  "recorded_at": "2026-08-25T02:10:19",
+  "meta": {
+    "docs": 5000,
+    "repeat": 3,
+    "chunk_size": null,
+    "max_chunk_bytes": null,
+    "with_ml": false,
+    "opensearch": "http://localhost:9200"
+  },
+  "total_seconds": 1.0934763,
+  "stages": [
+    {
+      "name": "색인 전체",
+      "seconds": 1.0934763,
+      "children": [
+        {
+          "name": "문서 준비",
+          "seconds": 0.013689899999999922,
+          "children": [],
+          "note": "(5000건, chunk_size=2000, max_chunk_bytes=10MB)"
+        },
+        {
+          "name": "전송",
+          "seconds": 0.7620601000000002,
+          "children": []
+        },
+        {
+          "name": "refresh 복구",
+          "seconds": 0.24125649999999998,
+          "children": []
+        }
+      ]
+    }
+  ]
+}

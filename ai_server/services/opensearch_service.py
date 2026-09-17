@@ -23,8 +23,20 @@ import logging
 from typing import Any, Dict, List, Optional
 
 import httpx
+from opensearchpy import AsyncOpenSearch
+from opensearchpy.helpers import async_bulk
 
 from ..config import OPENSEARCH_HOST, JOBS_INDEX
+
+try:
+    # 측정 하니스. 기본은 꺼져 있어 운영 시 오버헤드/누적이 없다.
+    from bench.timing import stage
+except ImportError:                          # bench/ 가 배포에 포함되지 않은 경우
+    from contextlib import contextmanager
+
+    @contextmanager
+    def stage(name: str):                    # type: ignore[misc]
+        yield {}
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +61,37 @@ _ML_MODEL_HASH = "a2ae3c4f161bd8e5a99a19ba5589443d33a120bb2bd67aa9da102c8b201f12
 
 # 배포된 model_id 캐시 (프로세스 내 재사용)
 _model_id: Optional[str] = None
+
+# ── bulk 튜닝 ─────────────────────────────────────────────────
+# 건수와 바이트를 둘 다 제한한다. OpenSearch의 http.max_content_length 기본값이
+# 100MB라, 건수만 제한하면 문서가 커질 때 요청 하나가 이 한도를 넘어 413으로 전량 실패한다.
+# chunk_size는 실측으로 정했다 (20,000건 기준 200→6.69s / 500→3.49s / 1000→2.53s /
+# 2000→2.39s / 5000→2.36s). 2000 이후로는 개선이 멈춰서 2000을 기본값으로 둔다.
+BULK_CHUNK_SIZE      = 2000
+BULK_MAX_CHUNK_BYTES = 10 * 1024 * 1024      # 10MB
+
+# opensearch-py 비동기 클라이언트 (프로세스 내 재사용)
+_os_client: Optional[AsyncOpenSearch] = None
+
+
+def _client() -> AsyncOpenSearch:
+    global _os_client
+    if _os_client is None:
+        _os_client = AsyncOpenSearch(
+            hosts=[OPENSEARCH_HOST],
+            timeout=120,
+            max_retries=3,
+            retry_on_timeout=True,
+        )
+    return _os_client
+
+
+async def close_client() -> None:
+    """앱 종료 시 커넥션 정리."""
+    global _os_client
+    if _os_client is not None:
+        await _os_client.close()
+        _os_client = None
 
 
 # ── 내부 유틸 ─────────────────────────────────────────────────
@@ -359,52 +402,145 @@ def build_search_text(job: Dict[str, Any]) -> str:
 
 
 # ── 인덱싱 ───────────────────────────────────────────────────
-async def bulk_index_jobs(jobs: List[Dict[str, Any]]) -> int:
-    """벌크 공고 인덱싱 — pipeline이 자동으로 임베딩 생성"""
-    if not jobs:
-        return 0
+def _fmt_date(val: Any) -> Any:
+    """datetime → OpenSearch ISO 8601 형식 (2026-04-19T07:18:09)"""
+    if val is None:
+        return None
+    s = str(val)
+    return s.replace(" ", "T").split(".")[0]  # 공백→T, 마이크로초 제거
 
-    def _fmt_date(val: Any) -> Any:
-        """datetime → OpenSearch ISO 8601 형식 (2026-04-19T07:18:09)"""
-        if val is None:
-            return None
-        s = str(val)
-        return s.replace(" ", "T").split(".")[0]  # 공백→T, 마이크로초 제거
 
-    lines = []
-    for job in jobs:
-        meta = {"index": {"_index": JOBS_INDEX, "_id": job["id"]}}
-        doc  = {
+def _to_action(job: Dict[str, Any]) -> Dict[str, Any]:
+    """공고 → async_bulk 액션"""
+    return {
+        "_op_type": "index",
+        "_index":   JOBS_INDEX,
+        "_id":      job["id"],
+        "_source": {
             **job,
             _TEXT_FIELD:  build_search_text(job),
             "created_at": _fmt_date(job.get("created_at")),
             "updated_at": _fmt_date(job.get("updated_at")),
-        }
-        lines.append(json.dumps(meta))
-        lines.append(json.dumps(doc, default=str))
-    body = "\n".join(lines) + "\n"
+        },
+    }
 
-    # pipeline 파라미터 추가 (모델 준비된 경우)
-    params = {"pipeline": _PIPELINE_ID} if _model_id else {}
 
-    async with httpx.AsyncClient(timeout=120.0) as c:
-        resp = await c.post(
-            f"{OPENSEARCH_HOST}/_bulk",
-            content=body.encode("utf-8"),
-            headers={"Content-Type": "application/x-ndjson"},
-            params=params,
-        )
-        resp.raise_for_status()
-        result = resp.json()
+async def _get_refresh_interval() -> Optional[str]:
+    """현재 refresh_interval. 명시값이 없으면 None (= 기본값 1s)."""
+    data = await _get(f"/{JOBS_INDEX}/_settings")
+    return (
+        data.get(JOBS_INDEX, {})
+            .get("settings", {})
+            .get("index", {})
+            .get("refresh_interval")
+    )
 
-    errors = [
-        item for item in result.get("items", [])
-        if item.get("index", {}).get("error")
-    ]
+
+async def _set_refresh_interval(value: Optional[str]) -> None:
+    """None을 주면 null로 설정 → OpenSearch 기본값으로 복구."""
+    await _put(f"/{JOBS_INDEX}/_settings", {"index": {"refresh_interval": value}})
+
+
+def _split_failures(
+    errors: List[Any],
+) -> "tuple[List[str], List[str], Dict[str, int]]":
+    """
+    실패 항목을 재시도 가능/불가로 분리하고 원인별 건수를 센다.
+    429/502/503/504 = 일시적(재시도 대상), 그 외(400 매핑 오류 등) = 영구 실패.
+    """
+    retryable: List[str] = []
+    permanent: List[str] = []
+    reasons:   Dict[str, int] = {}
+
+    for err in errors:
+        info = err.get("index", err) if isinstance(err, dict) else {}
+        doc_id = info.get("_id", "?")
+        status = info.get("status", 0)
+        reason = (info.get("error") or {}).get("type", "unknown")
+        reasons[reason] = reasons.get(reason, 0) + 1
+        (retryable if status in (429, 502, 503, 504) else permanent).append(doc_id)
+
+    return retryable, permanent, reasons
+
+
+async def bulk_index_jobs(
+    jobs: List[Dict[str, Any]],
+    chunk_size: Optional[int] = None,
+    max_chunk_bytes: Optional[int] = None,
+) -> int:
+    """
+    벌크 공고 인덱싱 — pipeline이 자동으로 임베딩 생성.
+
+    - 건수(chunk_size)와 바이트(max_chunk_bytes)를 **둘 다** 제한한다.
+      건수만 제한하면 문서가 커질 때 요청 하나가 과도하게 커져 413으로 전량 실패한다.
+    - 적재 중 refresh_interval을 끄고, try/finally로 반드시 복구한 뒤 명시적으로 1회 refresh.
+    - HTTP 200이어도 개별 항목은 실패할 수 있다 → raise_on_error=False로 받아 직접 파싱.
+    """
+    if not jobs:
+        return 0
+
+    size  = chunk_size      if chunk_size      is not None else BULK_CHUNK_SIZE
+    nbytes = max_chunk_bytes if max_chunk_bytes is not None else BULK_MAX_CHUNK_BYTES
+
+    with stage("문서 준비") as s:
+        actions = [_to_action(job) for job in jobs]
+        s["note"] = f"({len(jobs)}건, chunk_size={size}, max_chunk_bytes={nbytes//1024//1024}MB)"
+
+    # pipeline 파라미터 (모델 준비된 경우) — bulk 요청도 default_pipeline을 탄다
+    params: Dict[str, Any] = {"pipeline": _PIPELINE_ID} if _model_id else {}
+
+    client = _client()
+    ok = 0
+    errors: List[Any] = []
+
+    # 대량 적재 구간에서는 refresh를 끈다. 죽어도 복구되도록 try/finally.
+    original = await _get_refresh_interval()
+    await _set_refresh_interval("-1")
+    try:
+        with stage("전송" + (" + 임베딩" if _model_id else "")):
+            ok, errors = await async_bulk(
+                client,
+                actions,
+                chunk_size=size,
+                max_chunk_bytes=nbytes,
+                raise_on_error=False,      # 부분 실패를 예외로 날리지 않고 직접 처리
+                raise_on_exception=False,
+                request_timeout=120,
+                **params,
+            )
+    finally:
+        with stage("refresh 복구"):
+            await _set_refresh_interval(original)          # None이면 기본값으로 복구
+            await _post(f"/{JOBS_INDEX}/_refresh")         # 복구 후 명시적 1회 refresh
+
     if errors:
-        logger.warning("벌크 인덱싱 오류 %d건: %s", len(errors), errors[0])
+        retryable, permanent, reasons = _split_failures(errors)
+        logger.warning(
+            "벌크 인덱싱 실패 %d건 — 재시도 대상 %d / 영구 실패 %d | 원인별: %s",
+            len(errors), len(retryable), len(permanent), reasons,
+        )
 
-    ok = len(jobs) - len(errors)
+        # 일시적 실패만 1회 재시도 (영구 실패는 재시도해도 같은 결과)
+        if retryable:
+            retry_ids = set(retryable)
+            retry_actions = [a for a in actions if a["_id"] in retry_ids]
+            with stage("재시도"):
+                retry_ok, retry_errors = await async_bulk(
+                    client,
+                    retry_actions,
+                    chunk_size=size,
+                    max_chunk_bytes=nbytes,
+                    raise_on_error=False,
+                    raise_on_exception=False,
+                    request_timeout=120,
+                    **params,
+                )
+            ok += retry_ok
+            logger.info("재시도 결과: %d건 성공, %d건 여전히 실패", retry_ok, len(retry_errors))
+
+        if permanent:
+            logger.error("재시도 불가 문서 %d건 (예: %s)", len(permanent), permanent[:5])
+
     logger.info("OpenSearch 인덱싱 완료: %d / %d (knn=%s)", ok, len(jobs), bool(_model_id))
     return ok
 

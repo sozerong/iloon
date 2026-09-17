@@ -1,0 +1,112 @@
+{
+  "label": "task3_probe",
+  "dag": "ai_vs_normal_analysis",
+  "runs": [
+    777.0923219
+  ],
+  "ok": [
+    false
+  ],
+  "stats": {
+    "n": 1.0,
+    "mean": 777.0923219,
+    "p50": 777.0923219,
+    "p95": 777.0923219,
+    "min": 777.0923219,
+    "max": 777.0923219
+  },
+  "tasks": [
+    [
+      {
+        "task_id": "validate_input",
+        "state": "success",
+        "seconds": 1.177262
+      },
+      {
+        "task_id": "behavior_1",
+        "state": "success",
+        "seconds": 9.075086
+      },
+      {
+        "task_id": "validate_input",
+        "state": "success",
+        "seconds": 1.079272
+      },
+      {
+        "task_id": "behavior_1",
+        "state": "success",
+        "seconds": 12.657534
+      },
+      {
+        "task_id": "behavior_2",
+        "state": "up_for_retry",
+        "seconds": 6.735282
+      },
+      {
+        "task_id": "behavior_2",
+        "state": "failed",
+        "seconds": 6.106547
+      },
+      {
+        "task_id": "behavior_3",
+        "state": "upstream_failed",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "behavior_4",
+        "state": "upstream_failed",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "behavior_5",
+        "state": "upstream_failed",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "trend_1",
+        "state": "upstream_failed",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "user_segmentation",
+        "state": "upstream_failed",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "trend_2",
+        "state": "upstream_failed",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "trend_3",
+        "state": "upstream_failed",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "trend_4",
+        "state": "upstream_failed",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "trend_5",
+        "state": "upstream_failed",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "trend_6",
+        "state": "upstream_failed",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "job_popularity",
+        "state": "upstream_failed",
+        "seconds": 0.0
+      },
+      {
+        "task_id": "notify_complete",
+        "state": "success",
+        "seconds": 0.12222
+      }
+    ]
+  ]
+}
