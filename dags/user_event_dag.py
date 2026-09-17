@@ -49,7 +49,7 @@ with DAG(
     gen_events = BashOperator(
         task_id="gen_user_events",
         bash_command=(
-            f"{PYTHON_BIN} {PROJECT_DIR}/user_event_generator.py "
+            f"{PYTHON_BIN} {PROJECT_DIR}/events/user_event_generator.py "
             "--users 300 --ai-ratio 0.4 --days 30"
         ),
         env=BASE_ENV,

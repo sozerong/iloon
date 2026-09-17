@@ -60,10 +60,10 @@ DEFAULT_ARGS = {
     "email_on_retry": False,
 }
 
-BEHAVIOR_SCRIPT       = f"{PROJECT_DIR}/analyze_ai_vs_normal.py"
-TREND_SCRIPT          = f"{PROJECT_DIR}/analyze_job_trends.py"
-SEGMENTATION_SCRIPT   = f"{PROJECT_DIR}/analyze_user_segmentation.py"
-POPULARITY_SCRIPT     = f"{PROJECT_DIR}/analyze_job_popularity.py"
+BEHAVIOR_SCRIPT       = f"{PROJECT_DIR}/analytics/analyze_ai_vs_normal.py"
+TREND_SCRIPT          = f"{PROJECT_DIR}/analytics/analyze_job_trends.py"
+SEGMENTATION_SCRIPT   = f"{PROJECT_DIR}/analytics/analyze_user_segmentation.py"
+POPULARITY_SCRIPT     = f"{PROJECT_DIR}/analytics/analyze_job_popularity.py"
 
 with DAG(
     dag_id="ai_vs_normal_analysis",

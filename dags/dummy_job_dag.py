@@ -95,7 +95,7 @@ with DAG(
         task = BashOperator(
             task_id=f"gen_{cat['id']}",
             bash_command=(
-                f"{PYTHON_BIN} {PROJECT_DIR}/{cat['file']} --count 5"
+                f"{PYTHON_BIN} {PROJECT_DIR}/generators/{cat['file']} --count 5"
             ),
             env=BASE_ENV,
             doc_md=f"{cat['display']} 공고 5개 생성",
