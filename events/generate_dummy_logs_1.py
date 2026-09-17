@@ -5,10 +5,21 @@ from datetime import datetime, timedelta
 
 # ── 기초 데이터 ───────────────────────────────────────────────
 REGIONS = [
-    ("서울특별시", "강남구"), ("서울특별시", "마포구"), ("서울특별시", "성동구"),
-    ("경기도", "성남시 분당구"), ("경기도", "수원시"), ("경기도", "용인시"),
-    ("충청남도", "천안시 서북구"), ("충청남도", "아산시"),
-    ("부산광역시", "해운대구"), ("대전광역시", "유성구"),
+    ("충청남도", "천안시 서북구 불당동"),
+    ("충청남도", "천안시 서북구 백석동"),
+    ("충청남도", "천안시 서북구 성성동"),
+    ("충청남도", "천안시 서북구 두정동"),
+    ("충청남도", "천안시 동남구 신방동"),
+    ("충청남도", "천안시 동남구 청수동"),
+    ("충청남도", "천안시 동남구 봉명동"),
+    ("충청남도", "아산시 배방읍"),
+    ("충청남도", "아산시 탕정면"),
+    ("충청남도", "아산시 온천동"),
+    ("충청남도", "공주시 신관동"),
+    ("충청남도", "공주시 중동"),
+    ("충청남도", "논산시 취암동"),
+    ("충청남도", "당진시 읍내동"),
+    ("충청남도", "서산시 동문동"),
 ]
 
 DEVICES = ["mobile", "desktop", "tablet"]
@@ -62,7 +73,7 @@ def make_search(session_id, user_id, base_date):
         "keyword": random.choice(KEYWORDS),
         "result_count": random.randint(0, 150),
         "filters": {
-            "location": random.choice(["서울", "경기", "천안", "부산", None]),
+            "location": random.choice(["천안", "아산", "공주", "논산", "당진", "서산", None]),
             "career_level": random.choice(CAREER_LEVELS + [None]),
             "salary_min": random.choice([None, 3000, 4000, 5000]),
         },
@@ -204,4 +215,4 @@ def generate(days: int = 7, sessions_per_day: int = 200, output_dir: str = "."):
 
 if __name__ == "__main__":
     print("더미 로그 생성 시작...\n")
-    generate(days=7, sessions_per_day=200, output_dir="/GitHub/new_git/money/logs")
+    generate(days=7, sessions_per_day=200, output_dir="/home/claude/dummy_logs")
