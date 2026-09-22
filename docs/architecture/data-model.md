@@ -161,11 +161,17 @@ ORM 이 아니라 각 스크립트가 `CREATE TABLE IF NOT EXISTS` 로 직접 �
 | `event_count` | BIGINT |
 | `created_at` | TIMESTAMP DEFAULT NOW() |
 
-쓰기: **append-only INSERT**, `foreachBatch` + `executemany`.
+쓰기: `foreachBatch` + `executemany`, **`ON CONFLICT ... DO UPDATE`**.
 
-⚠️ 유니크 키가 없어 멱등하지 않다. 체크포인트가 날아가 같은 오프셋을 다시 읽으면
-중복 행이 쌓인다. `(window_start, event_type, is_ai_recommended)` UNIQUE +
-`ON CONFLICT DO UPDATE` 가 필요하다.
+유니크 인덱스 `uq_realtime_event_stats (window_start, event_type, is_ai_recommended)`
+**`NULLS NOT DISTINCT`** (PostgreSQL 15+). 이게 없으면 `is_ai_recommended` 가 NULL 인 행이
+서로 다른 것으로 취급돼 중복을 막지 못한다.
+
+`ensure_schema()` 가 최초 1회만 돈다 — 테이블 생성 → 기존 중복 정리 → 인덱스 생성.
+기존 테이블에 중복이 남아 있으면 인덱스 생성이 실패하므로 `ctid` 기준으로 먼저 정리한다.
+
+실제 PostgreSQL 15.19 로 검증: 중복 4행 → 2행 정리, 같은 배치 3회 재적재해도 3행 유지,
+값이 바뀌면 갱신.
 
 ### `user_segments` — K-Means 결과
 

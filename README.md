@@ -48,7 +48,7 @@ flowchart LR
 |---|---|---|---|---|
 | 수집 | 행동 이벤트 JSON | Pydantic 검증 → 버퍼(100건/5초) | JSONL | append, **응답 전 동기 flush** |
 | 전달 | JSONL | Kafka produce | 토픽 | append-only |
-| 스트리밍 | Kafka | 30초 텀블링 윈도우, watermark 60s | `realtime_event_stats` | **append-only INSERT** (upsert 아님) |
+| 스트리밍 | Kafka | 30초 텀블링 윈도우, watermark 60s | `realtime_event_stats` | **`ON CONFLICT` upsert (멱등)** |
 | 배치 | 원본 로그 | 13태스크 병렬 집계 | `user_segments`, `job_popularity` | **`DELETE FROM` 후 INSERT (멱등)** |
 | 학습 | 집계 지표 | K-Means(K=4) · GBTRegressor | 세그먼트·인기도 점수 | **매일 02:00 재학습** |
 | 색인 | 공고 문서 | 임베딩 384d → bulk(건수+바이트 청킹) | OpenSearch | refresh_interval 조정 후 복구 |
@@ -140,7 +140,8 @@ view_id 당 지원 최대 1회, `(user_id, job_id)` 조인은 실제로 팬아�
 
 - **재실행**: 배치 분석은 멱등하다. `user_segments`·`job_popularity` 모두 적재 전
   `DELETE FROM` 을 돈다. 같은 입력으로 재실행해 300행 → 300행(중복 0) 확인.
-  스트리밍 적재는 append-only 라 멱등하지 않다 — 체크포인트 유실 시 중복이 생길 수 있다.
+  스트리밍 적재도 멱등하다 — `(window_start, event_type, is_ai_recommended)` 유니크 인덱스
+  (`NULLS NOT DISTINCT`) + `ON CONFLICT DO UPDATE`. 체크포인트 유실 후 재소비해도 행이 늘지 않는다.
 - **데이터 품질**: 입력 건수 게이트(0건이면 `AirflowFailException`, 재시도 없음),
   Pydantic 검증 + ISO 8601 강제, bulk 부분 실패를 일시적(429/5xx)과 영구로 분리해 원인별 집계
 - **상류 의존**: `ExternalTaskSensor` 2개, `mode="reschedule"` 로 대기 중 워커 슬롯 미점유
@@ -200,7 +201,6 @@ AMD Ryzen 7 7800X3D(8C/16T) · RAM 63GB
 
 - 강제 종료 시 버퍼(최대 100건 / 5초) 유실 가능 → WAL 또는 수신 즉시 Kafka 기록
 - bulk 재시도 1회 → 지수 백오프
-- 스트리밍 적재가 append-only — 유니크 키나 upsert 가 없어 재처리 시 중복 가능
 - **추천 정확도는 측정하지 않았다.** 행동 로그가 시뮬레이터 산출물이고 전환율이
   상수로 박혀 있어(AI 북마크 0.20 / 지원 0.35, 일반 0.12 / 0.20), 모델을 평가하면
   시뮬레이터 규칙을 얼마나 복원했는지를 재는 셈이다. 근거는
