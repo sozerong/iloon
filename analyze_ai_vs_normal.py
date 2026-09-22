@@ -236,20 +236,30 @@ def analysis_4(df: DataFrame) -> None:
     print("분석 4. AI 매칭 점수 구간별 지원 전환율")
     print("=" * 55)
 
-    # 조회↔지원을 짝지을 키. user_event_generator.py 는 session_id 를 내보내지 않아
-    # (스키마: event_id/user_id/job_id/...) 같은 사용자·같은 공고 기준인 user_id 로 짝짓는다.
+    # 조회↔지원은 view_id 로 짝짓는다. 조회 1회마다 발급되고 그 조회에서 파생된
+    # 북마크·지원이 같은 값을 물고 나온다 (user_event_generator.py).
+    #
+    # (user_id, job_id) 로 조인하면 안 된다 — 같은 사용자가 같은 공고를 여러 번 보면
+    # 조회 N건 × 지원 M건의 곱으로 행이 불어나 전환율이 부풀려진다.
+    # 실측: 그 방식으로는 10.6% 가 나왔지만 설계상 참값은 6.95% 였다.
+    if "view_id" not in df.columns:
+        raise AnalysisException(
+            "이벤트에 view_id 가 없다. user_event_generator.py 를 최신본으로 다시 돌려서 "
+            "로그를 재생성할 것. view_id 없이는 조회↔지원 전환율을 정확히 계산할 수 없다."
+        )
+
     click_df = df.filter(
         (F.col("event_type") == "job_detail_view")
         & (F.col("is_ai_recommended") == True)
-    ).select("user_id", "job_id", "match_score")
+    ).select("view_id", "match_score")
 
     apply_df = df.filter(
         (F.col("event_type") == "apply_click")
         & (F.col("is_ai_recommended") == True)
-    ).select("user_id", "job_id", F.lit(1).alias("applied"))
+    ).select("view_id", F.lit(1).alias("applied")).dropDuplicates(["view_id"])
 
     joined = (
-        click_df.join(apply_df, ["user_id", "job_id"], "left")
+        click_df.join(apply_df, ["view_id"], "left")
         .withColumn("applied", F.coalesce(F.col("applied"), F.lit(0)))
         .withColumn(
             "score_bucket",

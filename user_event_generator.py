@@ -153,9 +153,16 @@ def generate_events(
             ts_str = ts.strftime("%Y-%m-%dT%H:%M:%S")
             session_sec = random.randint(10, 720)
 
+            # 이 조회 1회를 식별하는 키. 아래 북마크·지원이 같은 값을 물고 나간다.
+            # 이게 없으면 "어느 조회가 지원으로 이어졌는가"를 복원할 수 없다 —
+            # (user_id, job_id) 로 조인하면 같은 사용자가 같은 공고를 여러 번 볼 때
+            # 팬아웃이 생겨 전환율이 부풀려진다.
+            view_id = str(uuid.uuid4())
+
             # ① 조회
             events.append({
                 "event_id":        str(uuid.uuid4()),
+                "view_id":         view_id,
                 "event_type":      "job_detail_view",
                 "user_id":         user_id,
                 "job_id":          job_id,
@@ -172,6 +179,7 @@ def generate_events(
             if random.random() < bookmark_p:
                 events.append({
                     "event_id":        str(uuid.uuid4()),
+                    "view_id":         view_id,          # 이 북마크를 유발한 조회
                     "event_type":      "bookmark",
                     "user_id":         user_id,
                     "job_id":          job_id,
@@ -188,6 +196,7 @@ def generate_events(
                 if random.random() < apply_p:
                     events.append({
                         "event_id":        str(uuid.uuid4()),
+                        "view_id":         view_id,      # 이 지원을 유발한 조회
                         "event_type":      "apply_click",
                         "user_id":         user_id,
                         "job_id":          job_id,
