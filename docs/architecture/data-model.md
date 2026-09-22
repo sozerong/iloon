@@ -257,15 +257,16 @@ ORM 이 아니라 각 스크립트가 `CREATE TABLE IF NOT EXISTS` 로 직접 �
 | 지역 | `region_sido` | **`region`** |
 | 체류 시간 | `time_on_page_sec` | **`session_duration`** |
 | 세션 | `session_id` | **없음** |
+| 조회 식별 | 없음 | **`view_id`** (이번에 추가) |
 | 그 외 | `event_id`, `user_id`, `event_type`, `job_id`, `is_ai_recommended`, `match_score`, `category` | 동일 |
 
 `analyze_ai_vs_normal.py` 는 **JSONL 을 읽으면서 ORM 쪽 컬럼명을 참조**하고 있었다.
 그래서 step 2·3·4 가 항상 `Column ... does not exist` 로 실패했다.
 JSONL 쪽 이름으로 맞춰 고쳤고, `session_id` 는 이벤트에 아예 없어 `user_id` 로 대체했다.
 
-**남은 문제**: `user_id` 로는 조회↔지원을 1:1 로 짝지을 수 없다(같은 사용자가 같은 공고를
-여러 번 본다 — 평균 1.30회). `analysis_4` 는 이 때문에 계산이 성립하지 않는다.
-**이벤트에 `view_id` 를 넣는 것이 근본 해결**이다.
+**해결됨**: 이벤트에 `view_id` 를 넣었다. 조회 1회마다 발급하고 파생 이벤트가 물고 나간다.
+`analysis_4` 가 이걸로 조인하면서 전환율이 10.6% → 7.1% 로 잡혔다(설계값 7.0%).
+`tests/test_event_schema.py` 가 불변식을 지킨다.
 
 더 근본적으로는 **이벤트 스키마의 단일 출처가 없다.** 생성기·분석기·ORM 이 각자 정의를
 들고 있어 언제든 다시 갈라질 수 있다. Pydantic 모델이나 JSON Schema 로 한 곳에 두고
