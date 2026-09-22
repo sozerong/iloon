@@ -30,7 +30,10 @@ class Job(JobBase):
     deadline:     Mapped[Optional[str]]  = mapped_column(String(100))
     source:       Mapped[Optional[str]]  = mapped_column(String(50))
     url:          Mapped[Optional[str]]  = mapped_column(String(500))
-    embedding:    Mapped[Optional[str]]  = mapped_column(Text)           # 임베딩 벡터 (JSON 문자열)
+    # embedding 컬럼은 제거했다. 벡터는 OpenSearch 의 embedding_vector(knn_vector 384d)에
+    # 있고 ingest pipeline 이 서버 측에서 만든다. 이 컬럼에 쓰는 코드가 없었고,
+    # 남겨두면 "벡터가 PostgreSQL 에도 있다"는 오해를 만든다.
+    # 이미 만들어진 테이블에는 컬럼이 남지만 NULL 이라 무해하다 (create_all 은 DROP 하지 않는다).
     view_count:   Mapped[int]            = mapped_column(Integer, default=0)
     created_at:   Mapped[datetime]       = mapped_column(DateTime, default=datetime.utcnow)
     updated_at:   Mapped[datetime]       = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

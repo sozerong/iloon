@@ -126,7 +126,6 @@ erDiagram
         string deadline
         string source "dummy|scraper"
         string url
-        text embedding "JSON 문자열 - 미사용"
         int view_count
         datetime created_at
         datetime updated_at
@@ -140,8 +139,10 @@ erDiagram
     }
 ```
 
-**`jobs.embedding` 은 죽은 컬럼이다.** 벡터는 OpenSearch 의 `embedding_vector`
-(knn_vector 384d)에 있고, ingest pipeline 이 서버 측에서 만든다. 이 컬럼에 쓰는 코드가 없다.
+`jobs.embedding` 컬럼은 **제거했다.** 벡터는 OpenSearch 의 `embedding_vector`
+(knn_vector 384d)에 있고 ingest pipeline 이 서버 측에서 만든다. 쓰는 코드가 없었고,
+남겨두면 "벡터가 PostgreSQL 에도 있다"는 오해를 만든다.
+이미 만들어진 테이블에는 컬럼이 남는다 — `create_all` 은 DROP 하지 않는다. NULL 이라 무해하다.
 
 ---
 
