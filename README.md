@@ -114,17 +114,42 @@ Recall@1 과 MRR 은 오히려 조금 나쁘다. 상위 1건을 맞히는 능력
 
 ## 실행 방법
 
+### 전제조건
+
+- **Python 3.9** — 코드가 `typing.List` 계열을 쓴다 (PEP 585 미적용). 3.10+ 에서도 돌지만
+  검증은 3.9.7 에서만 했다.
+- **Java 17** — PySpark 3.3.4 용. `JAVA_HOME` 설정 필요.
+- Docker Desktop
+
 ```bash
-docker compose up -d opensearch postgres      # 인프라
-docker compose run --rm airflow-init          # Airflow DB 초기화
-docker compose up -d airflow-scheduler
-
-python bench/make_dag_input.py --per-category 200                      # 공고 2,000건
-ANALYSIS_BASE_DIR=. python user_event_generator.py --users 300 --days 30   # 이벤트
-
-python -m pytest tests/ -q                    # 테스트
-python bench/eval_search.py --mode all        # 검색 품질
+python -m venv .venv && source .venv/Scripts/activate   # Windows Git Bash
+# source .venv/bin/activate                              # macOS / Linux
+pip install -r requirements.txt
 ```
+
+가상환경 없이 시스템 파이썬을 쓸 거면 `python` 이 3.9 를 가리키는지 먼저 확인할 것
+(`python -c "import sys; print(sys.version)"`). 여러 버전이 깔린 PC 에서는
+`py -3.9 -m pip install -r requirements.txt` 처럼 런처로 버전을 못박는 편이 안전하다.
+
+### 인프라
+
+```bash
+docker compose up -d opensearch postgres
+docker compose run --rm airflow-init          # Airflow DB 초기화 (최초 1회)
+docker compose up -d airflow-scheduler
+```
+
+### 데이터 생성 · 실행
+
+```bash
+python bench/make_dag_input.py --per-category 200                          # 공고 2,000건
+ANALYSIS_BASE_DIR=. python user_event_generator.py --users 300 --days 30   # 이벤트 24만건
+
+python -m pytest tests/ -q                    # 테스트 4개
+python bench/eval_search.py --mode all        # 검색 품질 (OpenSearch 필요)
+```
+
+`eval_search.py` 는 `--mode neural`/`all` 일 때 ML 모델을 등록·배포한다. 최초 실행은 수 분 걸린다.
 
 벤치마크 상세는 [BENCHMARK.md](BENCHMARK.md) 의 각 절 상단에 재현 명령이 있다.
 
