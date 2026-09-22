@@ -74,7 +74,7 @@ def setup_logger() -> logging.Logger:
 logger = setup_logger()
 
 
-# ── PostgreSQL 테이블 생성 SQL ─────────────────────────────────
+# ── PostgreSQL 스키마 ─────────────────────────────────────────
 CREATE_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS realtime_event_stats (
     window_start      TIMESTAMP,
@@ -86,11 +86,53 @@ CREATE TABLE IF NOT EXISTS realtime_event_stats (
 )
 """
 
+# 유니크 인덱스를 걸기 전에 기존 중복을 정리한다.
+# 중복이 남아 있으면 인덱스 생성이 실패한다.
+# is_ai_recommended 는 NULL 일 수 있어 = 대신 IS NOT DISTINCT FROM 을 쓴다.
+DEDUPE_SQL = """
+DELETE FROM realtime_event_stats a
+USING realtime_event_stats b
+WHERE a.ctid < b.ctid
+  AND a.window_start = b.window_start
+  AND a.event_type   = b.event_type
+  AND a.is_ai_recommended IS NOT DISTINCT FROM b.is_ai_recommended
+"""
+
+# NULLS NOT DISTINCT (PostgreSQL 15+) — 이게 없으면 is_ai_recommended 가 NULL 인 행이
+# 서로 다른 것으로 취급돼 중복을 막지 못한다.
+CREATE_INDEX_SQL = """
+CREATE UNIQUE INDEX IF NOT EXISTS uq_realtime_event_stats
+ON realtime_event_stats (window_start, event_type, is_ai_recommended)
+NULLS NOT DISTINCT
+"""
+
+# 같은 윈도우를 다시 처리해도 행이 늘지 않는다.
+# 체크포인트가 유실돼 같은 오프셋을 재소비하는 경우가 이 경로로 흡수된다.
 INSERT_SQL = """
 INSERT INTO realtime_event_stats (
     window_start, window_end, event_type, is_ai_recommended, event_count
 ) VALUES (%s, %s, %s, %s, %s)
+ON CONFLICT (window_start, event_type, is_ai_recommended) DO UPDATE
+SET event_count = EXCLUDED.event_count,
+    window_end  = EXCLUDED.window_end,
+    created_at  = NOW()
 """
+
+# 스키마 준비는 최초 1회면 된다. 배치마다 DDL 을 날릴 이유가 없다.
+_schema_ready = False
+
+
+def ensure_schema(cur) -> None:
+    """테이블 + 중복 정리 + 유니크 인덱스. 두 번째 호출부터는 아무것도 하지 않는다."""
+    global _schema_ready
+    if _schema_ready:
+        return
+    cur.execute(CREATE_TABLE_SQL)
+    cur.execute(DEDUPE_SQL)
+    if cur.rowcount and cur.rowcount > 0:
+        logger.warning("기존 중복 %d행 정리 후 유니크 인덱스 생성", cur.rowcount)
+    cur.execute(CREATE_INDEX_SQL)
+    _schema_ready = True
 
 
 # ── foreachBatch 핸들러 ───────────────────────────────────────
@@ -117,7 +159,7 @@ def write_to_postgres(batch_df, batch_id: int) -> None:
             dbname=PG_JOB_DB,
         )
         with conn.cursor() as cur:
-            cur.execute(CREATE_TABLE_SQL)
+            ensure_schema(cur)
             records = [
                 (
                     row["window_start"],
