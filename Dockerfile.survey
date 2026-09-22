@@ -1,0 +1,23 @@
+FROM python:3.9-slim
+
+WORKDIR /app
+
+# 시스템 의존성
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Python 의존성 (survey 전용 경량 패키지)
+COPY requirements_survey.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
+
+# 소스 복사 (ai_server 패키지 전체 — 모델/스키마 공유)
+COPY ai_server/ ./ai_server/
+
+# 데이터 디렉토리
+RUN mkdir -p /app/ai_server/data
+
+EXPOSE 8000
+
+# main_survey.py 엔트리포인트 사용
+CMD ["uvicorn", "ai_server.main_survey:app", "--host", "0.0.0.0", "--port", "8000"]

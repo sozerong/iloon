@@ -28,7 +28,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 import anthropic
 
 # ── 경로 설정 ─────────────────────────────────────────────────
-BASE_DIR    = Path("C:/GitHub/new_git/money")
+BASE_DIR    = Path(__file__).parent.parent          # money/
 CACHE_DIR   = BASE_DIR / "cache"
 OUTPUT_DIR  = BASE_DIR / "results"
 APPLOG_DIR  = BASE_DIR / "applogs"
@@ -199,7 +199,7 @@ def _generate_jobs(client, trend_summary: str, job_count: int, used_companies: l
         "work_type": "하이브리드"
       }},
       "work_condition": {{
-        "location": {{"sido": "서울", "sigungu": "강남구", "address": "상세주소"}},
+        "location": {{"sido": "충청남도", "sigungu": "천안시 서북구", "address": "불당동 상세주소"}},
         "salary": {{"type": "연봉", "min": 40000000, "max": 60000000, "negotiable": true, "unit": "원"}},
         "work_hours": "09:00~18:00"
       }},

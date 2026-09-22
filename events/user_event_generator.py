@@ -89,14 +89,14 @@ def load_jobs() -> List[Dict[str, Any]]:
                         # 위치 파싱
                         wc  = r.get("work_condition", {})
                         loc = wc.get("location", {}) if isinstance(wc, dict) else {}
-                        sido = loc.get("sido", "서울") if isinstance(loc, dict) else "서울"
+                        sido = loc.get("sido", "충청남도") if isinstance(loc, dict) else "충청남도"
                         # 직군 파싱
                         pos = r.get("position", {})
                         jc  = pos.get("job_category", {}) if isinstance(pos, dict) else {}
                         category = jc.get("mid", "기타") if isinstance(jc, dict) else "기타"
                         jobs.append({
                             "job_id":   job_id,
-                            "region":   sido or "서울",
+                            "region":   sido or "충청남도",
                             "category": category or "기타",
                         })
         except Exception as e:

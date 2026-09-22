@@ -159,7 +159,7 @@ async def ai_recommend(
         return []
 
     # ai_summary(분석 요약)가 우선, 없으면 원문으로 대체
-    resume_ctx  = f"{analysis.ai_summary or analysis.original_text or ''}"
+    resume_ctx = f"{analysis.ai_summary or analysis.original_text or ''}"
     query_text  = resume_ctx[:500]  # 임베딩 쿼리용 (너무 길면 자름)
 
     # Neural Search로 후보 공고 추출 (top_k * 3개 후보 → LLM으로 top_k 선별)
@@ -182,11 +182,9 @@ async def ai_recommend(
 
     ollama = get_ollama()
 
-    # 기존 AI 추천 초기화
-    await user_db.execute(delete(AIRecommendation).where(AIRecommendation.user_id == user_id))
-
-    recs: List[AIRecommendation] = []
-    for job in candidates[:top_k]:
+    # 전체 후보 스코어링
+    scored: List[tuple] = []
+    for job in candidates:
         job_summary = (
             f"제목: {job.title}\n"
             f"회사: {job.company}\n"
@@ -206,8 +204,15 @@ async def ai_recommend(
             reason      = data.get("reason", "")
         except Exception as e:
             logger.warning("LLM 점수 계산 실패 (job=%s): %s", job.id, e)
-            match_score, reason = None, ""
+            match_score, reason = 0.0, ""
+        scored.append((job, match_score, reason))
 
+    # 점수 내림차순 정렬 → top_k 저장
+    scored.sort(key=lambda x: x[1], reverse=True)
+
+    await user_db.execute(delete(AIRecommendation).where(AIRecommendation.user_id == user_id))
+    recs: List[AIRecommendation] = []
+    for job, match_score, reason in scored[:top_k]:
         rec = AIRecommendation(
             id          = str(uuid.uuid4()),
             user_id     = user_id,
@@ -219,7 +224,7 @@ async def ai_recommend(
         recs.append(rec)
 
     await user_db.commit()
-    logger.info("AI 추천 완료: user=%s → %d건", user_id, len(recs))
+    logger.info("AI 추천 완료: user=%s → %d건 (후보 %d개 스코어링)", user_id, len(recs), len(scored))
     return recs
 
 

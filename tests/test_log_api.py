@@ -22,6 +22,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# log_api 는 tools/ 로 옮겨졌다. 최상위 모듈로 import 하므로 그 디렉터리를 경로에 넣는다.
+sys.path.insert(0, os.path.join(BASE_DIR, "tools"))
 sys.path.insert(0, BASE_DIR)
 
 EVENT_DATE = "2026-08-24"

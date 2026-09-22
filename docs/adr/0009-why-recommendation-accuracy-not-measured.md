@@ -11,7 +11,7 @@
 
 ## 왜 성립하지 않는가
 
-행동 로그는 `user_event_generator.py` 가 만든다. 규칙이 상수로 박혀 있다.
+행동 로그는 `events/user_event_generator.py` 가 만든다. 규칙이 상수로 박혀 있다.
 
 ```python
 match_score = round(random.uniform(0.65, 0.98), 2) if is_ai else None

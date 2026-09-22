@@ -22,7 +22,7 @@
     docker compose up -d kafka postgres
     docker compose run --rm --no-deps \
       -e PYSPARK_SUBMIT_ARGS="--packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.4 pyspark-shell" \
-      --entrypoint bash airflow-scheduler -lc "cd /opt/airflow/project && python stream_events.py"
+      --entrypoint bash airflow-scheduler -lc "cd /opt/airflow/project && python tools/stream_events.py"
 
 사용
     python bench/stream_latency.py --repeat 5
@@ -329,7 +329,7 @@ def selftest() -> None:
 
     # 페이로드 필드가 stream_events.EVENT_SCHEMA 와 어긋나면 from_json 이 null 을 낸다.
     # 그러면 행이 안 나타나고 "지연 무한"으로 오독된다 — 이름을 소스에서 직접 읽어 잠근다.
-    src = open(os.path.join(BASE_DIR, "stream_events.py"), encoding="utf-8").read()
+    src = open(os.path.join(BASE_DIR, "tools", "stream_events.py"), encoding="utf-8").read()
     fields = set(re.findall(r'StructField\(\s*"(\w+)"', src))
     assert fields and fields <= set(make_event("x", datetime.now())), (fields, make_event("x", datetime.now()).keys())
 

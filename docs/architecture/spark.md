@@ -39,7 +39,7 @@ flowchart TB
 
 ---
 
-## 1. Structured Streaming — `stream_events.py`
+## 1. Structured Streaming — `tools/stream_events.py`
 
 ### 파이프라인
 

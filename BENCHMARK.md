@@ -123,7 +123,7 @@ after에서 저장 p95가 0.039 → 0.744 ms로 오른 건 10요청마다 한 �
 
 **측정 조건**
 - 입력(측정 내내 고정): 공고 2,000건(10개 카테고리 JSONL) / 사용자 이벤트 244,839건(84MB)
-  - `bench/make_dag_input.py` + 저장소의 `user_event_generator.py`
+  - `bench/make_dag_input.py` + 저장소의 `events/user_event_generator.py`
 - Airflow 2.9.3 / LocalExecutor / 컨테이너 1개 / PySpark 3.3.4, Java 17
 - 측정 대상 DAG 외 상류 DAG는 **pause** — 스케줄 타고 돌면 입력 파일이 바뀐다
 - 3회 실행, `dag_run.start_date ~ end_date`

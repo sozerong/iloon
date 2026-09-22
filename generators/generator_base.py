@@ -81,11 +81,13 @@ TOOLS = [{"type": "web_search_20250305", "name": "web_search"}]
 @dataclass
 class CategoryConfig:
     """직무 카테고리별 생성기 설정"""
-    name:         str         # 파일명 식별자 (영문, e.g. "backend")
-    display_name: str         # 표시명 (한글, e.g. "백엔드/서버")
-    search_queries: List[str] # Phase 1 웹 검색 쿼리 목록
-    job_titles:   List[str]   # Phase 2에서 다양하게 생성할 직무명 힌트
-    skills_hint:  List[str]   # 해당 직무의 주요 기술스택 힌트
+    name:           str         # 파일명 식별자 (영문, e.g. "backend")
+    display_name:   str         # 표시명 (한글, e.g. "백엔드/서버")
+    search_queries: List[str]   # Phase 1 웹 검색 쿼리 목록
+    job_titles:     List[str]   # Phase 2에서 다양하게 생성할 직무명 힌트
+    skills_hint:    List[str]   # 해당 직무의 주요 기술스택 힌트
+    location_hint:  str = ""    # 근무지 지정 (예: "부산광역시")
+    deadline_hint:  str = ""    # 마감일 규칙 (예: "2026-06-20~2026-08-31 사이 균등 배분")
 
 
 # ── Phase 1: 직무 특화 트렌드 검색 ───────────────────────────
@@ -177,6 +179,21 @@ def _generate_jobs(
         config.display_name, job_count, session_id,
     )
 
+    location_example = (
+        f'{{"sido": "{config.location_hint}", "sigungu": "해당 시/군/구", "address": "상세주소"}}'
+        if config.location_hint else
+        '{{"sido": "충청남도", "sigungu": "천안시 서북구", "address": "불당동 상세주소"}}'
+    )
+    location_rule = (
+        f"- 모든 공고의 근무지(location.sido)는 반드시 \"{config.location_hint}\"로 설정"
+        if config.location_hint else ""
+    )
+    deadline_rule = (
+        f"- 마감일(deadline) 규칙: {config.deadline_hint}"
+        if config.deadline_hint else
+        f'- 마감일(deadline)은 null 또는 "{today}" 이후 날짜'
+    )
+
     prompt = f"""아래 채용 트렌드 정보를 바탕으로 일로온 채용공고 {job_count}개를 JSON으로 생성하세요.
 
 ## 직무 카테고리
@@ -198,6 +215,8 @@ def _generate_jobs(
 - 직무는 {config.display_name} 카테고리 내에서 다양하게
 - 모든 공고의 apply.method는 "일로온 입사지원"
 - job_id / company.id 에는 실제 UUID v4 형식 사용 (job_001 같은 형식 절대 금지)
+{location_rule}
+{deadline_rule}
 - 세션 시드: {session_id}
 
 반드시 순수 JSON만 출력. 마크다운/설명 없이:
@@ -234,7 +253,7 @@ def _generate_jobs(
         "work_type": "하이브리드"
       }},
       "work_condition": {{
-        "location": {{"sido": "서울", "sigungu": "강남구", "address": "상세주소"}},
+        "location": {location_example},
         "salary": {{"type": "연봉", "min": 40000000, "max": 60000000, "negotiable": true, "unit": "원"}},
         "work_hours": "09:00~18:00"
       }},
@@ -450,6 +469,34 @@ def save_cache(category_name: str, result: dict, logger: logging.Logger) -> None
         logger.error("캐시 저장 실패: %s", e)
 
 
+# ── 트렌드 기준 모음 (카테고리별 통합 JSON) ──────────────────
+TREND_SUMMARY_PATH = OUTPUT_DIR / "trend_summaries.json"
+
+
+def save_trend_summary(result: dict, config: CategoryConfig, logger: logging.Logger) -> None:
+    """카테고리별 trend_summary 를 하나의 JSON에 모아서 저장 (해당 카테고리만 갱신)"""
+    all_trends = {}
+    if TREND_SUMMARY_PATH.exists():
+        try:
+            with open(TREND_SUMMARY_PATH, encoding="utf-8") as f:
+                all_trends = json.load(f)
+        except Exception as e:
+            logger.warning("트렌드 모음 파일 읽기 실패 (새로 생성): %s", e)
+
+    all_trends[config.name] = {
+        "display_name":  config.display_name,
+        "analyzed_at":   result.get("analyzed_at", datetime.now().strftime("%Y-%m-%d")),
+        "trend_summary": result.get("trend_summary", {}),
+    }
+
+    try:
+        with open(TREND_SUMMARY_PATH, "w", encoding="utf-8") as f:
+            json.dump(all_trends, f, ensure_ascii=False, indent=2)
+        logger.info("트렌드 모음 저장: %s (%d개 카테고리)", TREND_SUMMARY_PATH, len(all_trends))
+    except Exception as e:
+        logger.error("트렌드 모음 저장 실패: %s", e)
+
+
 # ── 결과 저장 ─────────────────────────────────────────────────
 def save_results(result: dict, config: CategoryConfig, logger: logging.Logger) -> None:
     ts   = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -476,6 +523,9 @@ def save_results(result: dict, config: CategoryConfig, logger: logging.Logger) -
         logger.info("JSONL 저장: %s (%d건)", jsonl_path, len(jobs))
     except Exception as e:
         logger.error("JSONL 저장 실패: %s", e)
+
+    # 트렌드 기준 통합 JSON 갱신
+    save_trend_summary(result, config, logger)
 
 
 # ── 메인 실행 함수 ────────────────────────────────────────────

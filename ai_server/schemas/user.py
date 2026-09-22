@@ -109,6 +109,23 @@ class AIRecommendationOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class AIRecommendationWithJob(BaseModel):
+    """AI 추천 + 공고 상세 합산 응답"""
+    id:          str
+    user_id:     str
+    job_id:      str
+    match_score: Optional[float]
+    reason:      Optional[str]
+    created_at:  datetime
+    title:       Optional[str] = None
+    company:     Optional[str] = None
+    location:    Optional[str] = None
+    job_type:    Optional[str] = None
+    career_type: Optional[str] = None
+    salary:      Optional[str] = None
+    deadline:    Optional[str] = None
+
+
 # ── GeneralRecommendation ──────────────────────────────────────────────────────
 class GeneralRecommendationOut(BaseModel):
     id:         str

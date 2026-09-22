@@ -131,7 +131,7 @@ OpenSearch `http.max_content_length` 기본값이 100MB다. 이 선을 넘는 �
 - **채택: 요청 안에서 `await flush_to_disk()`.** 저장이 0.002 ms라 미룰 이유가 없다.
   미루는 대가(유실 창)만 있고 얻는 게 없었다. 코드도 줄어든다.
 
-④ **해결**: `log_api.py`
+④ **해결**: `tools/log_api.py`
 - `ingest_bulk()` — `background_tasks.add_task(flush_to_disk, ...)` → `await flush_to_disk(...)`.
   버퍼 스왑을 락 안에서 한 번에 처리(`to_flush`를 락 구간에서 결정)해 경합 구간을 줄였다.
   `BackgroundTasks` 의존성 제거.
@@ -184,7 +184,7 @@ OpenSearch `http.max_content_length` 기본값이 100MB다. 이 선을 넘는 �
   한 줄로 이어져 있었다. 주석엔 "트렌드 집계 결과 활용 가능"이라 적혀 있었다.
 
 ② **확인**:
-- 각 스크립트가 무엇을 읽는지 전부 확인했다. `analyze_ai_vs_normal.py`,
+- 각 스크립트가 무엇을 읽는지 전부 확인했다. `analytics/analyze_ai_vs_normal.py`,
   `analyze_job_trends.py`, `analyze_user_segmentation.py`, `analyze_job_popularity.py`
   **모두 `logs/*.jsonl` 원본만 읽는다.** 어느 것도 다른 것의 산출물을 읽지 않는다.
   → 주석의 "트렌드 결과 활용"은 코드에 없다. 체인은 실제 의존이 아니었다.
@@ -223,9 +223,9 @@ OpenSearch `http.max_content_length` 기본값이 100MB다. 이 선을 넘는 �
   Dockerfile이 이걸 보게 변경. (공식 constraint 파일은 pyspark==3.5.1 을 강제해
   저장소가 고정한 3.3.4 와 충돌해서 쓰지 않았다)
 - 분석 스크립트의 컬럼명이 이벤트 스키마와 어긋나 3개 단계가 항상 실패했다
-  (`analyze_ai_vs_normal.py`): `region_sido`→`region`,
+  (`analytics/analyze_ai_vs_normal.py`): `region_sido`→`region`,
   `time_on_page_sec`→`session_duration`, `session_id`→`user_id`.
-  전부 `user_event_generator.py` 가 내보내는 실제 필드명으로 맞췄다.
+  전부 `events/user_event_generator.py` 가 내보내는 실제 필드명으로 맞췄다.
 
 ⑤ **결과** (스케줄러 경로 3회, 공고 2,000건 / 이벤트 244,839건)
 
@@ -266,7 +266,7 @@ ingest pipeline으로 이관하라고 했다. 조사해 보니 **이미 전부 �
 - 애플리케이션은 원문만 보낸다 (`build_search_text`) — 벡터를 만들어 보내지 않는다
 - ML 모델 미배포 시 키워드 검색 폴백 (`neural_search` → `search_jobs`)
 
-실제 문제는 다른 데 있었다. **`setup_opensearch.py` 가 자기만의 `MAPPING` 을 들고 있었다.**
+실제 문제는 다른 데 있었다. **`tools/setup_opensearch.py` 가 자기만의 `MAPPING` 을 들고 있었다.**
 knn_vector도 default_pipeline도 없는 매핑이다. 이 스크립트로 인덱스를 먼저 만들면
 벡터 필드가 없는 인덱스가 생기고, `ensure_index()` 는 ML 모델이 없을 때 그 인덱스를
 그대로 쓴다(`if not mid: return`). 그러면 **neural search가 조용히 죽는다** —
@@ -275,12 +275,12 @@ knn_vector도 default_pipeline도 없는 매핑이다. 이 스크립트로 인�
 ② **확인**: 매핑의 출처가 둘이라는 것 자체가 원인이라, 어느 쪽으로 만들었는지에 따라
 인덱스가 달라지는 것을 코드로 확인했다. 배포 후 실측 검증은 ⑤에 있다.
 
-③ **접근**: `setup_opensearch.py` 의 매핑을 `ensure_index()` 와 같게 맞추는 방법도 있지만,
+③ **접근**: `tools/setup_opensearch.py` 의 매핑을 `ensure_index()` 와 같게 맞추는 방법도 있지만,
 그러면 **같은 매핑을 두 곳에서 관리**하게 되고 다음에 또 갈라진다.
 매핑의 단일 출처를 `opensearch_service` 로 두고 스크립트는 호출만 하게 했다.
 
 ④ **해결**:
-- `setup_opensearch.py` — 자체 `MAPPING` 제거. `ensure_ml_ready()` + `ensure_index()` 호출로 교체.
+- `tools/setup_opensearch.py` — 자체 `MAPPING` 제거. `ensure_ml_ready()` + `ensure_index()` 호출로 교체.
   `--no-ml` 옵션으로 ML 없이 키워드 인덱스만 만들 수도 있게 남겼다.
 - pipeline / 매핑 / 폴백 로직은 **그대로 뒀다.** 이미 지시서 요구대로 되어 있었다.
 

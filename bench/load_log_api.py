@@ -8,7 +8,7 @@ p50 / p95 / 평균과 처리량을 낸다. 서버의 구간별 통계(/stats/tim
     # 서버 (baseline)
     LOG_API_TIMING=1 ANALYSIS_BASE_DIR=... uvicorn bench.log_api_before:app --port 8100
     # 서버 (after)
-    LOG_API_TIMING=1 ANALYSIS_BASE_DIR=... uvicorn log_api:app --port 8100
+    LOG_API_TIMING=1 ANALYSIS_BASE_DIR=... uvicorn tools.log_api:app --port 8100
 
     python bench/load_log_api.py --concurrency 20 --total 20000 --batch 10 --label task2_before
 """

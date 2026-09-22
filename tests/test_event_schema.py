@@ -30,6 +30,8 @@ from typing import Any, Dict, List
 import pytest
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# user_event_generator 는 events/ 로 옮겨졌다.
+sys.path.insert(0, os.path.join(BASE_DIR, "events"))
 sys.path.insert(0, BASE_DIR)
 
 # 시뮬레이터에 박혀 있는 설계값 (user_event_generator.py)

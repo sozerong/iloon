@@ -64,7 +64,7 @@ max_active_runs=1
 
 ### 스트리밍 end-to-end 지연 ≤ 150초
 
-여기서도 목표치를 내가 고르지 않았다. `stream_events.py` 에 세 값이 박혀 있다.
+여기서도 목표치를 내가 고르지 않았다. `tools/stream_events.py` 에 세 값이 박혀 있다.
 
 ```python
 .withWatermark("event_time", "60 seconds")
@@ -268,7 +268,7 @@ PG_HOST_PORT=5433 docker compose up -d kafka postgres   # 호스트 5432 가 비
 docker compose run --rm --no-deps \
   -e ANALYSIS_BASE_DIR=/tmp/streambench \
   -e PYSPARK_SUBMIT_ARGS="--packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.4 pyspark-shell" \
-  --entrypoint bash airflow-scheduler -lc "cd /opt/airflow/project && python stream_events.py"
+  --entrypoint bash airflow-scheduler -lc "cd /opt/airflow/project && python tools/stream_events.py"
 
 PG_PORT=5433 python bench/stream_latency.py --repeat 6   # 다른 셸에서
 python bench/stream_latency.py --selftest

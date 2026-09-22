@@ -208,7 +208,7 @@ ORM 이 아니라 각 스크립트가 `CREATE TABLE IF NOT EXISTS` 로 직접 �
 
 매핑의 단일 출처는 `ai_server/services/opensearch_service.py` 의 `_build_mapping()` 이다
 ([ADR-0005](../adr/0005-embedding-ingest-pipeline.md) 참조 — 예전엔
-`setup_opensearch.py` 가 별도 매핑을 들고 있어 갈라졌다).
+`tools/setup_opensearch.py` 가 별도 매핑을 들고 있어 갈라졌다).
 
 ### settings
 
@@ -259,7 +259,7 @@ ORM 이 아니라 각 스크립트가 `CREATE TABLE IF NOT EXISTS` 로 직접 �
 
 같은 "사용자 행동 이벤트"인데 **정의가 두 곳에 따로 있고 컬럼명이 다르다.**
 
-| 개념 | `UserActivityLog` (ORM, PostgreSQL) | `user_event_generator.py` (JSONL) |
+| 개념 | `UserActivityLog` (ORM, PostgreSQL) | `events/user_event_generator.py` (JSONL) |
 |---|---|---|
 | 지역 | `region_sido` | **`region`** |
 | 체류 시간 | `time_on_page_sec` | **`session_duration`** |
@@ -267,7 +267,7 @@ ORM 이 아니라 각 스크립트가 `CREATE TABLE IF NOT EXISTS` 로 직접 �
 | 조회 식별 | 없음 | **`view_id`** (이번에 추가) |
 | 그 외 | `event_id`, `user_id`, `event_type`, `job_id`, `is_ai_recommended`, `match_score`, `category` | 동일 |
 
-`analyze_ai_vs_normal.py` 는 **JSONL 을 읽으면서 ORM 쪽 컬럼명을 참조**하고 있었다.
+`analytics/analyze_ai_vs_normal.py` 는 **JSONL 을 읽으면서 ORM 쪽 컬럼명을 참조**하고 있었다.
 그래서 step 2·3·4 가 항상 `Column ... does not exist` 로 실패했다.
 JSONL 쪽 이름으로 맞춰 고쳤고, `session_id` 는 이벤트에 아예 없어 `user_id` 로 대체했다.
 

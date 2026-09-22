@@ -16,7 +16,7 @@
 ## 조사
 
 각 분석 스크립트가 무엇을 읽는지 전부 확인했다.
-`analyze_ai_vs_normal.py`, `analyze_job_trends.py`, `analyze_user_segmentation.py`,
+`analytics/analyze_ai_vs_normal.py`, `analyze_job_trends.py`, `analyze_user_segmentation.py`,
 `analyze_job_popularity.py` — **전부 `logs/*.jsonl` 원본만 읽는다.**
 어느 것도 다른 것의 산출물을 읽지 않는다.
 

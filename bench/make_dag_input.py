@@ -8,7 +8,7 @@ analyze_*.py 가 읽는 형식 그대로 만든다:
 results.zip 의 실제 생성 결과를 씨앗으로 복제한다. job_id는 전부 고유.
 
 이후 사용자 이벤트는 저장소의 생성기를 그대로 쓴다:
-    ANALYSIS_BASE_DIR=. python user_event_generator.py --users 300 --ai-ratio 0.4 --days 30
+    ANALYSIS_BASE_DIR=. python events/user_event_generator.py --users 300 --ai-ratio 0.4 --days 30
 
 실행:
     python bench/make_dag_input.py --per-category 200
@@ -93,7 +93,7 @@ def main() -> None:
         print(f"  {cat:<10} {args.per_category}건 → {os.path.basename(out)}")
 
     print(f"\n공고 {total}건 생성 ({len(files)}개 카테고리) → {LOGS_DIR}")
-    print("다음: ANALYSIS_BASE_DIR=. python user_event_generator.py --users 300 --ai-ratio 0.4 --days 30")
+    print("다음: ANALYSIS_BASE_DIR=. python events/user_event_generator.py --users 300 --ai-ratio 0.4 --days 30")
 
 
 if __name__ == "__main__":

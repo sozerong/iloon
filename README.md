@@ -31,6 +31,26 @@ flowchart LR
   SENSOR[ExternalTaskSensor ×2<br/>상류 DAG 완료 대기] -.-> GATE
 ```
 
+### 디렉터리
+
+루트에 흩어져 있던 스크립트를 목적별로 묶었다.
+
+| 경로 | 내용 |
+|---|---|
+| `ai_server/` | FastAPI 추천·검색 API |
+| `dags/` | Airflow DAG 4개 |
+| `tools/` | `log_api.py`(수집 API), `stream_events.py`(스트리밍), `setup_opensearch.py` |
+| `analytics/` | 배치 분석 4종 (DAG 가 `BashOperator` 로 호출) |
+| `events/` | 이벤트 생성기 |
+| `generators/` | 직군별 공고 생성기 |
+| `bench/` | 측정 하니스와 벤치 스크립트, 결과 JSON |
+| `docs/` | ADR · 아키텍처 · SLO |
+
+`tests/` 에는 자동 테스트(`test_log_api.py`, `test_event_schema.py`)와
+수동 확인 스크립트(`test_opensearch.py`, `test_recommendation.py`)가 섞여 있다.
+후자는 `def test_*` 가 없고 import 시점에 외부 서비스에 붙으므로
+`tests/conftest.py` 의 `collect_ignore` 로 pytest 수집에서 뺐다.
+
 ## 더 자세히
 
 프레임워크 내부와 데이터 모델은 따로 문서로 뒀다.
@@ -200,7 +220,7 @@ docker compose up -d airflow-scheduler
 
 ```bash
 python bench/make_dag_input.py --per-category 200                          # 공고 2,000건
-ANALYSIS_BASE_DIR=. python user_event_generator.py --users 300 --days 30   # 이벤트 24만건
+ANALYSIS_BASE_DIR=. python events/user_event_generator.py --users 300 --days 30   # 이벤트 24만건
 
 python -m pytest tests/ -q                    # 테스트 4개
 python bench/eval_search.py --mode all        # 검색 품질 (OpenSearch 필요)

@@ -11,7 +11,7 @@
 `text_embedding` processor, `field_map: search_text → embedding_vector`,
 `knn_vector` 384차원, `default_pipeline`, ML 미배포 시 키워드 폴백까지.
 
-실제 문제는 다른 데 있었다. **`setup_opensearch.py` 가 자기만의 `MAPPING` 을 들고 있었다.**
+실제 문제는 다른 데 있었다. **`tools/setup_opensearch.py` 가 자기만의 `MAPPING` 을 들고 있었다.**
 knn_vector 도 default_pipeline 도 없는 매핑이다. 이걸로 먼저 인덱스를 만들면
 `ensure_index()` 가 ML 모델이 없을 때 그 인덱스를 그대로 쓴다 →
 **neural search 가 에러 없이 조용히 죽는다.**
@@ -44,7 +44,7 @@ ML 미배포 시 폴백 정상(2,170건 반환).
 
 ## 같이 고친 것
 
-`setup_opensearch.py` 의 자체 `MAPPING` 을 제거하고 `ensure_ml_ready()` + `ensure_index()`
+`tools/setup_opensearch.py` 의 자체 `MAPPING` 을 제거하고 `ensure_ml_ready()` + `ensure_index()`
 호출로 교체했다. 매핑의 단일 출처를 `opensearch_service` 로 두지 않으면 다음에 또 갈라진다.
 
 ## 남은 일
