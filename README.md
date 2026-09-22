@@ -1,260 +1,153 @@
-# 일로온 (Iloon) — AI 기반 채용 공고 추천 플랫폼
+# Illo-on — 채용 공고 검색·추천 파이프라인
 
-> **PySpark MLlib + OpenSearch Neural Search + Kafka + Airflow**를 활용한  
-> 실시간 행동 분석 및 AI 추천 시스템 포트폴리오 프로젝트
+구직자의 행동 로그를 수집해 검색과 추천에 반영하는 파이프라인. 수집부터 서빙까지 전 구간을 구현했고,
+프로젝트 종료 후 성능·안정성을 단독으로 재점검해 문제를 고치고 전후를 실측했다.
 
----
+| 개선 | 전 | 후 |
+|---|---|---|
+| DagRun p50 | 126.3s | **74.2s (−41%)** |
+| 성공 응답 시점 디스크 미반영 | 100건 | **0건** |
+| 35,000건 bulk 색인 | HTTP 413으로 0건 | **5.444초 전량 성공** |
+
+측정 조건과 원본 수치: [BENCHMARK.md](BENCHMARK.md) · [IMPROVEMENTS.md](IMPROVEMENTS.md) ·
+`bench/results/*.json`
 
 ## 아키텍처
 
+```mermaid
+flowchart LR
+  G[공고 생성기<br/>10직군] --> A[FastAPI 수집<br/>Pydantic 검증]
+  A --> B[인메모리 버퍼<br/>100건/5초 · 응답 전 flush]
+  B --> C[JSONL 로그] --> K[Kafka]
+  K --> S[Spark Structured Streaming<br/>30초 윈도우 · watermark 60s]
+  S --> P[(PostgreSQL<br/>realtime_event_stats)]
+  C --> AF[Airflow<br/>분석 DAG 13태스크 병렬]
+  AF --> P2[(PostgreSQL<br/>user_segments · job_popularity)]
+  AF --> ML[MLlib<br/>K-Means · GBTRegressor]
+  J[공고 문서] --> O[(OpenSearch<br/>knn_vector 384d)]
+  O --> API[검색 API<br/>neural → 키워드 폴백]
+  P2 --> API
+  GATE[입력 건수 게이트<br/>0건이면 즉시 실패] -.-> AF
+  SENSOR[ExternalTaskSensor ×2<br/>상류 DAG 완료 대기] -.-> GATE
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      Data Pipeline                          │
-│                                                             │
-│  Job Scraper ──→ PostgreSQL ──→ OpenSearch (Neural Index)   │
-│       ↓                                                     │
-│  User Event Generator ──→ Kafka ──→ Spark Streaming         │
-│       ↓                                                     │
-│  Airflow DAG (매일 02:00)                                   │
-│    ├── 사용자 행동 분석 (Spark)                              │
-│    ├── K-Means 세그멘테이션 (MLlib)                         │
-│    ├── 공고 트렌드 분석 (Spark)                              │
-│    └── 공고 인기도 예측 GBTRegressor (MLlib)                │
-│                  ↓                                          │
-│         Superset 대시보드                                   │
-└─────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────┐
-│                     AI Server (FastAPI)                     │
-│                                                             │
-│  POST /api/v1/survey/{user_id}                              │
-│  POST /api/v1/recommendations/{user_id}/general             │
-│    └── OpenSearch Neural Search (MiniLM-L12 384-dim)        │
-│  POST /api/v1/recommendations/{user_id}/ai                  │
-│    └── Ollama LLaMA3 RAG                                    │
-│  POST /api/v1/resume/analyze                                │
-│    └── LLM 이력서 분석                                      │
-└─────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 기술 스택
-
-| 영역 | 기술 |
-|------|------|
-| **AI 서버** | FastAPI, Python 3.9, asyncpg, SQLAlchemy 2.0 |
-| **벡터 검색** | OpenSearch 2.13.0, ML Commons, Neural Search |
-| **임베딩 모델** | `paraphrase-multilingual-MiniLM-L12-v2` (384차원) |
-| **LLM** | Ollama LLaMA3 (RAG 기반 추천 설명) |
-| **데이터 처리** | PySpark 3.x, MLlib (K-Means, GBTRegressor) |
-| **스트리밍** | Kafka (KRaft), Spark Structured Streaming |
-| **워크플로우** | Apache Airflow 2.x (LocalExecutor) |
-| **데이터베이스** | PostgreSQL 15 |
-| **시각화** | Apache Superset 3.1 |
-| **컨테이너** | Docker Compose |
-
----
-
-## 주요 기능
-
-### 1. AI 공고 추천 (Neural Search)
-- 사용자 설문(직무/지역/경력) → 쿼리 텍스트 생성
-- OpenSearch Neural Search (kNN) 로 의미 기반 공고 매칭
-- Ollama LLaMA3 RAG로 추천 이유 자연어 생성
-
-### 2. 사용자 행동 분석 (PySpark)
-- AI 추천 공고 vs 일반 공고 클릭·저장·지원 전환율 비교
-- 지역별 / 매칭 점수 구간별 지원 전환율
-- 일별 AI 추천 효과 트렌드
-
-### 3. K-Means 사용자 세그멘테이션 (MLlib)
-- 피처: 조회수, 북마크율, 지원율, AI 추천 조회 비율, 세션 체류 시간
-- 4개 클러스터 자동 분류: 적극_지원형 / AI_선호형 / 탐색형 / 소극형
-- PostgreSQL `user_segments` 테이블 저장
-
-### 4. GBT 공고 인기도 예측 (MLlib)
-- 피처: 직군, 경력, 기업 규모, 지역, 연봉, 기술스택 수, 조회·북마크 수
-- GBTRegressor로 지원율(%) 예측
-- 인기도 등급 A/B/C/D 분류 → `job_popularity` 테이블 저장
-
-### 5. 실시간 이벤트 집계 (Kafka + Spark Streaming)
-- Kafka 토픽 `user-events` 30초 윈도우 집계
-- 이벤트 유형별 × AI 추천 여부별 실시간 통계
-- PostgreSQL `realtime_event_stats` 테이블 적재
-
-### 6. 분석 결과 시각화 (Superset)
-- 세그먼트별 사용자 분포 (파이 차트)
-- 직군별 공고 인기도 (막대 차트)
-- 인기도 Top 10 공고 테이블
-
----
-
-## 서비스 포트
-
-| 서비스 | 포트 | 접속 정보 |
-|--------|------|-----------|
-| AI Server (FastAPI) | `8000` | `/docs` 로 Swagger UI |
-| Airflow | `8080` | admin / admin |
-| Superset | `8088` | admin / admin |
-| Kafka UI | `8090` | — |
-| OpenSearch | `9200` | — |
-| OpenSearch Dashboards | `5601` | — |
-| Ollama | `11434` | — |
-
----
-
-## 실행 방법
-
-### 전체 서비스 실행
-
-```bash
-# 환경 변수 설정 (선택)
-export ANTHROPIC_API_KEY=sk-ant-...
-
-# 서비스 기동
-docker-compose up -d
-
-# Airflow 초기화 완료 대기 (약 30초)
-docker-compose logs -f airflow-init
-```
-
-### ML 모델 등록 (OpenSearch Neural Search)
-
-```bash
-# OpenSearch 완전 기동 후 실행
-python setup_opensearch.py
-```
-
-### Superset 대시보드 자동 설정
-
-```bash
-# Superset 기동 후 실행 (약 30~60초 대기)
-python setup_superset.py
-```
-
-### 동작 확인
-
-```bash
-# OpenSearch 직접 확인 (공고 수, 벡터, 검색)
-python test_opensearch.py
-
-# 추천 시스템 엔드투엔드 테스트
-python test_recommendation.py --survey backend --user-id test-user-001
-python test_recommendation.py --survey ai      --user-id test-user-002
-```
-
-### 분석 스크립트 단독 실행
-
-```bash
-# 사용자 행동 분석
-python analyze_ai_vs_normal.py --step all
-
-# 공고 트렌드 분석
-python analyze_job_trends.py --step all
-
-# K-Means 세그멘테이션
-python analyze_user_segmentation.py --k 4
-
-# GBT 공고 인기도 예측
-python analyze_job_popularity.py --step all
-
-# Kafka 실시간 스트리밍 (spark-submit 필요)
-spark-submit \
-  --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1 \
-  stream_events.py
-```
-
----
-
-## 프로젝트 구조
-
-```
-money/
-├── ai_server/                    # FastAPI AI 서버
-│   ├── main.py
-│   ├── routers/
-│   │   ├── survey.py             # 설문 저장
-│   │   ├── recommendations.py   # 공고 추천 (Neural / RAG)
-│   │   ├── resume.py            # 이력서 분석
-│   │   └── chat.py              # LLM 채팅
-│   └── services/
-│       ├── opensearch_service.py # Neural Search + ML 모델 관리
-│       ├── recommendation_service.py
-│       ├── rag_service.py
-│       └── ollama_client.py
-│
-├── dags/                         # Airflow DAG
-│   ├── ai_analysis_dag.py        # 메인 분석 파이프라인
-│   ├── job_scraper_dag.py
-│   └── user_event_dag.py
-│
-├── analyze_ai_vs_normal.py       # Spark: 사용자 행동 분석 (5단계)
-├── analyze_job_trends.py         # Spark: 공고 트렌드 분석 (6단계)
-├── analyze_user_segmentation.py  # Spark MLlib: K-Means 세그멘테이션
-├── analyze_job_popularity.py     # Spark MLlib: GBT 인기도 예측
-├── stream_events.py              # Spark Streaming: Kafka 실시간 집계
-│
-├── user_event_generator.py       # 사용자 이벤트 더미 생성기 (Kafka 발행 포함)
-├── generator_backend.py          # 직군별 공고 더미 생성기
-├── generator_frontend.py
-├── generator_ai_ml.py
-│   ... (총 9개 직군)
-│
-├── setup_opensearch.py           # OpenSearch ML 모델 자동 등록
-├── setup_superset.py             # Superset 대시보드 자동 설정
-├── test_opensearch.py            # OpenSearch 동작 확인
-├── test_recommendation.py        # 추천 시스템 E2E 테스트
-│
-├── docker-compose.yml            # 전체 서비스 정의
-├── Dockerfile                    # Airflow 커스텀 이미지
-├── requirements.txt
-└── init-db.sql                   # PostgreSQL 초기 스키마
-```
-
----
 
 ## 데이터 흐름
 
+| 단계 | 입력 | 처리 | 출력 | 쓰기 방식 |
+|---|---|---|---|---|
+| 수집 | 행동 이벤트 JSON | Pydantic 검증 → 버퍼(100건/5초) | JSONL | append, **응답 전 동기 flush** |
+| 전달 | JSONL | Kafka produce | 토픽 | append-only |
+| 스트리밍 | Kafka | 30초 텀블링 윈도우, watermark 60s | `realtime_event_stats` | **append-only INSERT** (upsert 아님) |
+| 배치 | 원본 로그 | 13태스크 병렬 집계 | `user_segments`, `job_popularity` | **`DELETE FROM` 후 INSERT (멱등)** |
+| 학습 | 집계 지표 | K-Means(K=4) · GBTRegressor | 세그먼트·인기도 점수 | **매일 02:00 재학습** |
+| 색인 | 공고 문서 | 임베딩 384d → bulk(건수+바이트 청킹) | OpenSearch | refresh_interval 조정 후 복구 |
+| 서빙 | 검색어 | neural → 결과 없으면 키워드 폴백 | API 응답 | — |
+
+## 문제 정의
+
+- 데이터: 채용 공고를 외부에서 확보할 수 없어 10직군 공고 생성기와 행동 로그 시뮬레이터를
+  앞단에 두었다. **실사용 트래픽은 없다.**
+- 성공 기준: 로그 수집부터 학습·서빙까지 한 바퀴가 재실행 가능한 형태로 도는 것.
+
+## 검색 품질 — neural 을 넣을 값이 있었나
+
+공고를 10직군으로 나눠 생성했으므로 각 공고에 정답 직군 라벨이 이미 있다.
+"이 검색어의 정답 = 해당 직군의 공고"로 두고 직군당 5개씩 **50개 쿼리**로 측정했다.
+검색어는 공고 제목을 베끼지 않고 구직자가 칠 법한 말로 적었다(제목을 베끼면 키워드 검색이 유리해진다).
+
+```bash
+python bench/eval_search.py --mode all
 ```
-[공고 수집]
-job_scraper (Playwright) → PostgreSQL (iloon_jobs)
-                        → OpenSearch (iloon_jobs 인덱스 + 임베딩 벡터)
 
-[사용자 이벤트]
-user_event_generator.py → JSONL 파일 + Kafka(user-events)
-                       ↓
-              Spark Structured Streaming
-                       ↓
-              PostgreSQL (realtime_event_stats)
+| 방식 | Recall@1 | Recall@3 | Recall@5 | MRR | nDCG@3 | nDCG@5 |
+|---|---|---|---|---|---|---|
+| keyword | **0.720** | 0.540 | 0.653 | **0.781** | 0.582 | 0.647 |
+| neural | 0.700 | **0.587** | **0.700** | 0.773 | **0.613** | **0.679** |
+| hybrid(폴백) | 0.700 | 0.587 | 0.700 | 0.773 | 0.613 | 0.679 |
 
-[배치 분석 — Airflow 매일 02:00]
-JSONL 파일 → PySpark
-  ├── 행동 분석 결과  → results/analysis*.json
-  ├── user_segments  → PostgreSQL
-  ├── 트렌드 결과    → results/trend*.json
-  └── job_popularity → PostgreSQL + results/job_popularity_scores.json
+**neural 이 이기기도 하고 지기도 한다.** Recall@3 은 +8.7%, nDCG@3 은 +5.3% 나아졌지만
+Recall@1 과 MRR 은 오히려 조금 나쁘다. 상위 1건을 맞히는 능력은 키워드가 낫고,
+상위 3~5건 안에 정답을 모아오는 능력은 neural 이 낫다.
 
-[AI 추천 요청]
-POST /survey/{uid} → 설문 저장
-POST /recommendations/{uid}/general
-  → OpenSearch Neural kNN → 상위 K개 공고 반환
-POST /recommendations/{uid}/ai
-  → RAG (공고 컨텍스트 + LLaMA3) → 맞춤 추천 설명
+**hybrid 가 neural 과 완전히 같다** — neural 이 빈 결과를 낸 적이 없어 폴백이 한 번도
+발동하지 않았다. 폴백 경로는 현재 트래픽에서 사실상 죽은 코드다.
+
+직군별로 보면 편차가 훨씬 크다 (Recall@3):
+
+| 직군 | keyword | neural | 차이 |
+|---|---|---|---|
+| 기획/PM | 0.600 | **0.933** | +0.333 |
+| QA/테스트 | 0.600 | **0.867** | +0.267 |
+| AI/ML | 0.333 | **0.533** | +0.200 |
+| 보안 | 0.400 | **0.600** | +0.200 |
+| 프론트엔드 | 0.467 | 0.467 | 0 |
+| 인프라/DevOps | 0.267 | 0.267 | 0 |
+| 데이터 | **0.733** | 0.667 | −0.067 |
+| 게임 | **0.867** | 0.667 | −0.200 |
+| **백엔드/서버** | **0.533** | 0.200 | **−0.333** |
+
+백엔드에서 neural 이 크게 진다. 직군 간 어휘가 겹치는 구간(서버·API·데이터베이스가
+데이터/인프라 공고에도 나온다)에서 임베딩이 섞이는 것으로 보인다.
+
+> **한계**: 고유 공고가 **30건**(직군당 3건)뿐이다. 벤치마크에 쓴 5,000건은 이 30건을
+> 복제한 것이라 검색 평가에 쓸 수 없다. 그래서 k 를 1/3/5 로 낮춰 측정했다.
+> 또한 합성 공고라 실제 채용 공고보다 직군 구분이 뚜렷하다 — **수치는 낙관적으로 읽어야 한다.**
+
+## 설계 결정
+
+결정과 기각한 대안은 [docs/adr](docs/adr) 에 있다.
+
+- [ADR-0001](docs/adr/0001-storage-split-by-query-type.md) 조회 성격에 따른 저장소 분리
+- [ADR-0002](docs/adr/0002-dag-dependency-and-input-gate.md) DAG 의존성 재정의와 입력 게이트
+- [ADR-0003](docs/adr/0003-sync-flush-before-response.md) 응답 전 동기 flush
+- [ADR-0004](docs/adr/0004-bulk-chunk-size-and-bytes.md) bulk 건수·바이트 이중 제한
+- [ADR-0005](docs/adr/0005-embedding-ingest-pipeline.md) 임베딩 ingest pipeline — **측정 결과 기각** (111배 저하)
+
+## 운영 설계
+
+- **재실행**: 배치 분석은 멱등하다. `user_segments`·`job_popularity` 모두 적재 전
+  `DELETE FROM` 을 돈다. 같은 입력으로 재실행해 300행 → 300행(중복 0) 확인.
+  스트리밍 적재는 append-only 라 멱등하지 않다 — 체크포인트 유실 시 중복이 생길 수 있다.
+- **데이터 품질**: 입력 건수 게이트(0건이면 `AirflowFailException`, 재시도 없음),
+  Pydantic 검증 + ISO 8601 강제, bulk 부분 실패를 일시적(429/5xx)과 영구로 분리해 원인별 집계
+- **상류 의존**: `ExternalTaskSensor` 2개, `mode="reschedule"` 로 대기 중 워커 슬롯 미점유
+
+## 실행 방법
+
+```bash
+docker compose up -d opensearch postgres      # 인프라
+docker compose run --rm airflow-init          # Airflow DB 초기화
+docker compose up -d airflow-scheduler
+
+python bench/make_dag_input.py --per-category 200                      # 공고 2,000건
+ANALYSIS_BASE_DIR=. python user_event_generator.py --users 300 --days 30   # 이벤트
+
+python -m pytest tests/ -q                    # 테스트
+python bench/eval_search.py --mode all        # 검색 품질
 ```
 
----
+벤치마크 상세는 [BENCHMARK.md](BENCHMARK.md) 의 각 절 상단에 재현 명령이 있다.
 
-## 개발 포인트
+## 측정 조건
 
-- **Python 3.9 호환**: `List`, `Tuple`, `Dict` from `typing` 모듈 사용 (PEP 585 미적용)
-- **OpenSearch Neural Search**: SHA256 해시 + huggingface/ prefix 두 단계 모델 등록
-- **메모리 최적화**: OpenSearch JVM 2g, ml_commons jvm threshold 99%
-- **Kafka KRaft 모드**: Zookeeper 없이 단일 노드 브로커 운영
-- **GBT 파이프라인**: StringIndexer → VectorAssembler → StandardScaler → GBTRegressor
+단일 노드 · Python 3.9.7 · Airflow 2.9.3(LocalExecutor) · OpenSearch 2.13(heap 2GB) · Spark 3.3.4
+AMD Ryzen 7 7800X3D(8C/16T) · RAM 63GB
 
----
+- 수집 부하: 동시 20 · 총 20,000건 · 3회
+- DAG: 공고 2,000건 · 이벤트 244,839건 · 3회
+- 색인: 문서 5,000~50,000건 · 3회
+- 검색 품질: 코퍼스 30건 · 쿼리 50개
 
-## License
+## 남은 과제
 
-MIT
+- 강제 종료 시 버퍼(최대 100건 / 5초) 유실 가능 → WAL 또는 수신 즉시 Kafka 기록
+- bulk 재시도 1회 → 지수 백오프
+- 스트리밍 적재가 append-only — 유니크 키나 upsert 가 없어 재처리 시 중복 가능
+- **`analysis_4`(매칭 점수 구간별 전환율)는 계산할 수 없다.** 조회와 지원을 잇는 키가
+  이벤트 스키마에 없다. 현재는 `(user_id, job_id)` 로 조인하는데 같은 사용자가 같은 공고를
+  여러 번 보면 팬아웃이 생긴다(쌍당 평균 1.30회). 그래서 결과가 10.6%로 나오지만
+  설계상 참값은 6.95%다. 이벤트에 `view_id` 를 넣어야 고칠 수 있다.
+- **추천 정확도는 측정하지 않았다.** 행동 로그가 시뮬레이터 산출물이고 전환율이
+  상수로 박혀 있어(AI 북마크 0.20 / 지원 0.35, 일반 0.12 / 0.20), 모델을 평가하면
+  시뮬레이터 규칙을 얼마나 복원했는지를 재는 셈이다. 근거는
+  [ADR-0009](docs/adr/0009-why-recommendation-accuracy-not-measured.md) 에 적었다.
