@@ -1,0 +1,103 @@
+{
+  "name": "stream_latency",
+  "recorded_at": "2026-09-22T20:04:01",
+  "definition": "Kafka produce(ack) → realtime_event_stats 행 관측",
+  "meta": {
+    "repeat": 6,
+    "poll_interval_seconds": 0.5,
+    "heartbeat_interval_seconds": 1.0,
+    "heartbeat_events": 1023,
+    "gap_between_probes_seconds": 5.0,
+    "gap_step_seconds": 6.0,
+    "stream_ready_wait_seconds": 130.8,
+    "kafka": "localhost:9094",
+    "postgres": "localhost:5433/iloon_jobs",
+    "window_seconds": 30.0,
+    "watermark_seconds": 60.0,
+    "trigger_seconds": 30.0
+  },
+  "declared_bound": {
+    "window": 30.0,
+    "watermark": 60.0,
+    "trigger_observe": 30.0,
+    "trigger_emit": 30.0,
+    "total": 150.0
+  },
+  "runs": [
+    {
+      "event_type": "bench_probe_194649_1",
+      "produced_at": "2026-09-22T19:49:00.665",
+      "event_time": "2026-09-22T19:49:00.660",
+      "window_start": "2026-09-22T19:49:00",
+      "window_end": "2026-09-22T19:49:30",
+      "event_count": 1,
+      "latency_seconds": 150.0587432384491,
+      "offset_in_window_seconds": 0.66,
+      "after_window_end_seconds": 120.72393321990967
+    },
+    {
+      "event_type": "bench_probe_194649_2",
+      "produced_at": "2026-09-22T19:51:35.747",
+      "event_time": "2026-09-22T19:51:35.746",
+      "window_start": "2026-09-22T19:51:30",
+      "window_end": "2026-09-22T19:52:00",
+      "event_count": 1,
+      "latency_seconds": 145.11308455467224,
+      "offset_in_window_seconds": 5.746,
+      "after_window_end_seconds": 120.8607337474823
+    },
+    {
+      "event_type": "bench_probe_194649_3",
+      "produced_at": "2026-09-22T19:54:11.863",
+      "event_time": "2026-09-22T19:54:11.862",
+      "window_start": "2026-09-22T19:54:00",
+      "window_end": "2026-09-22T19:54:30",
+      "event_count": 1,
+      "latency_seconds": 139.12288093566895,
+      "offset_in_window_seconds": 11.862,
+      "after_window_end_seconds": 120.98628044128418
+    },
+    {
+      "event_type": "bench_probe_194649_4",
+      "produced_at": "2026-09-22T19:56:47.990",
+      "event_time": "2026-09-22T19:56:47.989",
+      "window_start": "2026-09-22T19:56:30",
+      "window_end": "2026-09-22T19:57:00",
+      "event_count": 1,
+      "latency_seconds": 132.47050213813782,
+      "offset_in_window_seconds": 17.989,
+      "after_window_end_seconds": 120.46067428588867
+    },
+    {
+      "event_type": "bench_probe_194649_5",
+      "produced_at": "2026-09-22T19:59:23.469",
+      "event_time": "2026-09-22T19:59:23.468",
+      "window_start": "2026-09-22T19:59:00",
+      "window_end": "2026-09-22T19:59:30",
+      "event_count": 1,
+      "latency_seconds": 127.3760633468628,
+      "offset_in_window_seconds": 23.468,
+      "after_window_end_seconds": 120.84542512893677
+    },
+    {
+      "event_type": "bench_probe_194649_6",
+      "produced_at": "2026-09-22T20:01:59.853",
+      "event_time": "2026-09-22T20:01:59.852",
+      "window_start": "2026-09-22T20:01:30",
+      "window_end": "2026-09-22T20:02:00",
+      "event_count": 1,
+      "latency_seconds": 121.20533442497253,
+      "offset_in_window_seconds": 29.852,
+      "after_window_end_seconds": 121.05836749076843
+    }
+  ],
+  "stats": {
+    "n": 6.0,
+    "mean": 135.8911014397939,
+    "p50": 132.47050213813782,
+    "p95": 150.0587432384491,
+    "min": 121.20533442497253,
+    "max": 150.0587432384491
+  },
+  "verdict": "상한 초과"
+}

@@ -68,6 +68,10 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    ports:
+      # 호스트에서 돌리는 스크립트(stream_events.py, bench/*)가 PG_HOST=localhost 로 붙는다.
+      # 호스트에 이미 5432 를 쓰는 PostgreSQL 이 있으면 PG_HOST_PORT 로 비켜 간다.
+      - "${PG_HOST_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "airflow"]
       interval: 10s
