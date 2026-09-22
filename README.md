@@ -31,6 +31,17 @@ flowchart LR
   SENSOR[ExternalTaskSensor ×2<br/>상류 DAG 완료 대기] -.-> GATE
 ```
 
+## 더 자세히
+
+프레임워크 내부와 데이터 모델은 따로 문서로 뒀다.
+
+| 문서 | 내용 |
+|---|---|
+| [docs/architecture/spark.md](docs/architecture/spark.md) | Structured Streaming 파이프라인, 배치 잡 4개, MLlib 구성 |
+| [docs/architecture/airflow.md](docs/architecture/airflow.md) | DAG 3개 태스크 그래프, 센서 `execution_delta` 근거, 게이트 |
+| [docs/architecture/data-model.md](docs/architecture/data-model.md) | ERD, 테이블 DDL, OpenSearch 매핑, **이벤트 스키마 불일치** |
+| [docs/adr](docs/adr) | 설계 결정 6건 (기각한 대안 포함) |
+
 ## 데이터 흐름
 
 | 단계 | 입력 | 처리 | 출력 | 쓰기 방식 |
