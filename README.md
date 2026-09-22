@@ -40,6 +40,7 @@ flowchart LR
 | [docs/architecture/spark.md](docs/architecture/spark.md) | Structured Streaming 파이프라인, 배치 잡 4개, MLlib 구성 |
 | [docs/architecture/airflow.md](docs/architecture/airflow.md) | DAG 3개 태스크 그래프, 센서 `execution_delta` 근거, 게이트 |
 | [docs/architecture/data-model.md](docs/architecture/data-model.md) | ERD, 테이블 DDL, OpenSearch 매핑, **이벤트 스키마 불일치** |
+| [docs/metrics.md](docs/metrics.md) | **SLO 와 그 목표치의 근거** — 무엇이 미달인지 포함 |
 | [docs/adr](docs/adr) | 설계 결정 6건 (기각한 대안 포함) |
 
 ## 데이터 흐름
@@ -76,9 +77,31 @@ python bench/eval_search.py --mode all
 | neural | 0.700 | **0.587** | **0.700** | 0.773 | **0.613** | **0.679** |
 | hybrid(폴백) | 0.700 | 0.587 | 0.700 | 0.773 | 0.613 | 0.679 |
 
-**neural 이 이기기도 하고 지기도 한다.** Recall@3 은 +8.7%, nDCG@3 은 +5.3% 나아졌지만
-Recall@1 과 MRR 은 오히려 조금 나쁘다. 상위 1건을 맞히는 능력은 키워드가 낫고,
-상위 3~5건 안에 정답을 모아오는 능력은 neural 이 낫다.
+**neural 이 이기기도 하고 지기도 한다.** Recall@3·nDCG 는 neural 이, Recall@1·MRR 은
+keyword 가 앞선다. 방향이 갈리면 평균 차이만으로 판단할 수 없다.
+
+### 그 차이는 노이즈인가 — 쌍체 검정
+
+같은 쿼리 50개를 두 모드가 모두 처리했으므로 **쿼리 단위로 짝지어** 볼 수 있다.
+
+```bash
+python bench/search_significance.py
+```
+
+| | 값 |
+|---|---|
+| 평균 차이 (Recall@3) | +0.0467 |
+| 부호검정 | 승 19 / 패 16 / 동점 15 → **p = 0.7359** |
+| 쌍체 부트스트랩 95% CI (10,000회) | **−0.0533 ~ +0.1467** |
+
+**판정: 구별 불가.** 구간이 0 을 포함하고, 이긴 쿼리와 진 쿼리 수가 거의 같다.
+쿼리 50개에서 0.047 은 **문항 2.35개**다.
+
+평균만 봤으면 "Recall@3 이 8.7% 개선"이라고 썼을 것이다. 쌍체로 보면 그 문장이 서지 않는다.
+neural 경로는 ML 노드 배포 + ingest pipeline + `knn_vector` 384d 저장을 요구하는데,
+**그 비용을 내고 얻은 것이 측정상 keyword 와 구별되지 않는다.**
+
+끄자는 뜻이 아니다. **켤 근거를 아직 만들지 못했다**는 뜻이다.
 
 **hybrid 가 neural 과 완전히 같다** — neural 이 빈 결과를 낸 적이 없어 폴백이 한 번도
 발동하지 않았다. 폴백 경로는 현재 트래픽에서 사실상 죽은 코드다.
@@ -181,6 +204,7 @@ ANALYSIS_BASE_DIR=. python user_event_generator.py --users 300 --days 30   # 이
 
 python -m pytest tests/ -q                    # 테스트 4개
 python bench/eval_search.py --mode all        # 검색 품질 (OpenSearch 필요)
+python bench/search_significance.py           # neural vs keyword 쌍체 검정 (저장된 결과만 사용)
 ```
 
 `eval_search.py` 는 `--mode neural`/`all` 일 때 ML 모델을 등록·배포한다. 최초 실행은 수 분 걸린다.
@@ -201,6 +225,10 @@ AMD Ryzen 7 7800X3D(8C/16T) · RAM 63GB
 
 - 강제 종료 시 버퍼(최대 100건 / 5초) 유실 가능 → WAL 또는 수신 즉시 Kafka 기록
 - bulk 재시도 1회 → 지수 백오프
+- **neural 검색이 keyword 와 구별되지 않는다** (p=0.736). 코퍼스 30건이 IR 평가로 작아
+  쿼리를 늘려도 구간이 줄지 않는다. 고유 공고를 늘려야 재측정이 의미를 갖는다.
+- **스트리밍 end-to-end 지연 미측정.** `trigger(30s)` + `window(30s)` + watermark 로
+  상한은 선언돼 있으나 실제로 재지 않았다. [docs/metrics.md](docs/metrics.md) 참조
 - **추천 정확도는 측정하지 않았다.** 행동 로그가 시뮬레이터 산출물이고 전환율이
   상수로 박혀 있어(AI 북마크 0.20 / 지원 0.35, 일반 0.12 / 0.20), 모델을 평가하면
   시뮬레이터 규칙을 얼마나 복원했는지를 재는 셈이다. 근거는

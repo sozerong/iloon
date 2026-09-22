@@ -1,0 +1,21 @@
+{
+  "file": "search_quality_20260922_113945.json",
+  "metric": "recall@3",
+  "queries": 50,
+  "keyword_mean": 0.54,
+  "neural_mean": 0.5866666666666667,
+  "diff": 0.046666666666666634,
+  "sign_test": {
+    "win": 19,
+    "lose": 16,
+    "tie": 15,
+    "p_two_sided": 0.7358788008568808
+  },
+  "bootstrap_ci95": [
+    -0.05333333333333333,
+    0.14666666666666667
+  ],
+  "bootstrap_reps": 10000,
+  "seed": 20260922,
+  "verdict": "구별 불가"
+}
